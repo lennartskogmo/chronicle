@@ -1,0 +1,11 @@
+- ObjectName     : example.table_1
+  ConnectionName : example
+  Strategy       : load_full
+  ObjectSource   : example.table_1
+  KeyColumns     : [id]
+
+- ObjectName     : example.table_2
+  ConnectionName : example
+  Strategy       : load_full
+  ObjectSource   : example.table_2
+  KeyColumns     : [id]
