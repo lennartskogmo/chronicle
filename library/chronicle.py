@@ -272,7 +272,7 @@ class DeltaBatchWriter:
             allowMissingColumns = True) \
         .select([
             when((col("_origin") == 1) & (lead(col(KEY)).over(ws).isNull()), "I") \
-            .when((col("_origin") == 1) & (lead(col(CHECKSUM)).over(ws) != col(CHECKSUM)), "U") \
+            .when((col("_origin") == 1) & (lead(col("_origin")).over(ws) == 2) & (col(CHECKSUM) != lead(col(CHECKSUM)).over(ws)), "U") \
             .alias(OPERATION),
             current_timestamp().alias(LOADED),
             "*"]) \
@@ -288,7 +288,7 @@ class DeltaBatchWriter:
             allowMissingColumns = True) \
         .select([
             when((col("_origin") == 1) & (lead(col(KEY)).over(ws).isNull()), "I") \
-            .when((col("_origin") == 1) & (lead(col(CHECKSUM)).over(ws) != col(CHECKSUM)), "U") \
+            .when((col("_origin") == 1) & (lead(col("_origin")).over(ws) == 2) & (col(CHECKSUM) != lead(col(CHECKSUM)).over(ws)), "U") \
             .when((col("_origin") == 2) & (lag(col(KEY)).over(ws).isNull()), "D") \
             .alias(OPERATION),
             current_timestamp().alias(LOADED),
