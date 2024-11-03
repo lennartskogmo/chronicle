@@ -68,6 +68,7 @@ def test__DeltaBatchWriter__insert_update_delete__with_identical_duplicates(tabl
     delete_actual_df = spark.sql(f"SELECT id, fruit, version, {OPERATION} FROM {table}")
     assertDataFrameEqual(delete_expected_df, delete_actual_df)
 
+    # Test resulting active rows.
     final_expected_df = spark.createDataFrame([
         (1, "Apple",  3),
         (2, "Banana", 2)
@@ -140,6 +141,7 @@ def test__DeltaBatchWriter__insert_update_delete__with_nonidentical_duplicates(t
     delete_actual_df = spark.sql(f"SELECT id, fruit, version, {OPERATION} FROM {table}")
     assertDataFrameEqual(delete_expected_df, delete_actual_df)
 
+    # Test resulting active rows.
     final_expected_df = spark.createDataFrame([
         (1, "Apple",  3),
         (2, "Banana", 2)
