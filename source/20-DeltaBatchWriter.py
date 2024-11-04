@@ -63,6 +63,8 @@ class DeltaBatchWriter:
         df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(self.table)
     
     # Capture inserted and updated records from full or partial source data frame.
+    # Will only write one row per key even if source data frame contains duplicate rows.
+    # Arbitrary row will be used if source data frame contains nonidentical duplicate rows.
     def __insert_update(self, df):
         ws = Window.partitionBy(col(KEY)).orderBy(col("_origin"))
         df = df.withColumn("_origin", lit(1)) \
@@ -71,7 +73,7 @@ class DeltaBatchWriter:
             allowMissingColumns = True) \
         .select([
             when((col("_origin") == 1) & (lead(col(KEY)).over(ws).isNull()), "I") \
-            .when((col("_origin") == 1) & (lead(col(CHECKSUM)).over(ws) != col(CHECKSUM)), "U") \
+            .when((col("_origin") == 1) & (lead(col("_origin")).over(ws) == 2) & (col(CHECKSUM) != lead(col(CHECKSUM)).over(ws)), "U") \
             .alias(OPERATION),
             current_timestamp().alias(LOADED),
             "*"]) \
@@ -79,6 +81,8 @@ class DeltaBatchWriter:
         df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(self.table)
     
     # Capture inserted, updated and deleted records from full source data frame.
+    # Will only write one row per key even if source data frame contains duplicate rows.
+    # Arbitrary row will be used if source data frame contains nonidentical duplicate rows.
     def __insert_update_delete(self, df):
         ws = Window.partitionBy(col(KEY)).orderBy(col("_origin"))
         df = df.withColumn("_origin", lit(1)) \
@@ -87,7 +91,7 @@ class DeltaBatchWriter:
             allowMissingColumns = True) \
         .select([
             when((col("_origin") == 1) & (lead(col(KEY)).over(ws).isNull()), "I") \
-            .when((col("_origin") == 1) & (lead(col(CHECKSUM)).over(ws) != col(CHECKSUM)), "U") \
+            .when((col("_origin") == 1) & (lead(col("_origin")).over(ws) == 2) & (col(CHECKSUM) != lead(col(CHECKSUM)).over(ws)), "U") \
             .when((col("_origin") == 2) & (lag(col(KEY)).over(ws).isNull()), "D") \
             .alias(OPERATION),
             current_timestamp().alias(LOADED),
