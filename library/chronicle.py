@@ -235,7 +235,7 @@ class DeltaBatchWriter:
         df = add_key_column(df, self.key)                  # 3 Add key column
         if self.drop: df = drop_columns(df, self.drop)     # 4 Drop columns
         df = add_checksum_column(df, self.ignore)          # 5 Add checksum column
-        # Remove duplicates
+        # Remove duplicates. Not implemented.
         # Create table.
         if not spark.catalog._jcatalog.tableExists(self.table):
             self.__create_table(df)
