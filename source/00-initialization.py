@@ -1,7 +1,7 @@
 from os import environ
 from re import match, sub
 from urllib.parse import urlencode
-from pyspark.sql.functions import coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, md5, row_number, when
+from pyspark.sql.functions import coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, xxhash64, row_number, when
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
