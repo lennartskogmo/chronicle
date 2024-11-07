@@ -2,7 +2,7 @@
 from os import environ
 from re import match, sub
 from urllib.parse import urlencode
-from pyspark.sql.functions import col, concat_ws, current_timestamp, expr, lag, lead, lit, md5, row_number, when
+from pyspark.sql.functions import coalesce, col, concat_ws, current_timestamp, expr, hash, lag, lead, lit, md5, row_number, when
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
@@ -88,15 +88,16 @@ def drop_columns(df, drop):
 # Add CHECKSUM column to beginning of data frame.
 def add_checksum_column(df, ignore=None):
     if ignore is None:
-        return df.select([md5(concat_ws("<|^|>", *sorted(df.columns))).alias(CHECKSUM), "*"])
+        columns = sorted(df.columns)
     elif isinstance(ignore, str):
         ignore = conform_column_name(ignore)
-        return df.select([md5(concat_ws("<|^|>", *sorted(c for c in df.columns if c != ignore))).alias(CHECKSUM), "*"])
+        columns = sorted(c for c in df.columns if c != ignore)
     elif isinstance(ignore, list):
         ignore = [conform_column_name(c) for c in ignore]
-        return df.select([md5(concat_ws("<|^|>", *sorted(c for c in df.columns if c not in ignore))).alias(CHECKSUM), "*"])
+        columns = sorted(c for c in df.columns if c not in ignore)
     else:
         raise Exception("Invalid ignore")
+    return df.select([hash(concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit('')) for c in columns])).alias(CHECKSUM), "*"])
 
 # Add KEY column to beginning of data frame.
 def add_key_column(df, key):
