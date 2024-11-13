@@ -75,8 +75,10 @@ def conform_column_names(df):
 
 # Conform column name to naming convention.
 def conform_column_name(cn):
-    cn = cn.lower()                                # Convert to lowercase.
-    cn = cn.translate(str.maketrans("æøå", "eoa")) # Replace Norwegian characters with Latin characters.
-    cn = sub("[^a-z0-9]+", "_", cn)                # Replace all characters except letters and numbers with underscores.
-    cn = sub("^_|_$", "", cn)                      # Remove leading and trailing underscores.
+    cn = cn.translate(str.maketrans("ÆØÅæøå", "EOAeoa")) # Replace Norwegian characters with Latin characters.
+    if cn != cn.upper():
+        cn = sub("([A-Z])", r"_\1", cn)                  # Add underscore before upper case letters if column name is mixed case.
+    cn = cn.lower()                                      # Convert to lower case.
+    cn = sub("[^a-z0-9]+", "_", cn)                      # Replace all characters except letters and numbers with underscores.
+    cn = sub("^_|_$", "", cn)                            # Remove leading and trailing underscores.
     return cn
