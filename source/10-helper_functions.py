@@ -33,15 +33,14 @@ def get_object(object):
     else:
         raise Exception("Invalid object")
 
-# Return new reader instance if argument is string, else act as pass-through function and return argument itself.
-def get_reader(reader):
-    if isinstance(reader, str):
-        # Lookup connection details.
-        connection_with_secrets = spark.table(CONNECTION).filter(f"ConnectionName == '{reader}'").collect()[0].asDict()
-        for key, value in connection_with_secrets.items():
-            if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
-                connection_with_secrets[key] = dbutils.secrets.get(scope="kv", key=value[1:-1])
-        # Map connection details to reader constructor arguments.
+# Return new reader instance or None if no reader was found.
+def get_reader(connection):
+    if isinstance(connection, str) or isinstance(connection, dict):
+        # Get connection configuration.
+        connection_with_secrets = get_connection_with_secrets(connection)
+        if connection_with_secrets is None:
+            return connection_with_secrets
+        # Map connection configuration to reader constructor arguments.
         reader_arguments = {}
         for key, value in connection_with_secrets.items():
             if value is not None:
@@ -53,7 +52,9 @@ def get_reader(reader):
         # Instantiate reader.
         reader = globals()[connection_with_secrets["Reader"]]
         reader = reader(**reader_arguments)
-    return reader
+        return reader
+    else:
+        raise Exception("Invalid connection")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
