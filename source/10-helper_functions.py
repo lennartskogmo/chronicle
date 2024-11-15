@@ -13,13 +13,13 @@ def get_connection_with_secrets(connection):
         connection = spark.table(CONNECTION).filter(lower("ConnectionName") == lower(lit(connection))).collect()
         connection = connection[0].asDict() if connection else None
         if connection is None:
-            return connection
+            return None
     if isinstance(connection, dict):
+        if not connection:
+            return None
         connection_with_secrets = {}
         for key, value in connection.items():
             connection_with_secrets[key] = resolve_secret(value)
-        if not connection_with_secrets:
-            connection_with_secrets = None 
         return connection_with_secrets
     else:
         raise Exception("Invalid connection")
@@ -39,7 +39,7 @@ def get_reader(connection):
         # Get connection configuration.
         connection_with_secrets = get_connection_with_secrets(connection)
         if connection_with_secrets is None:
-            return connection_with_secrets
+            return None
         # Map connection configuration to reader constructor arguments.
         reader_arguments = {}
         for key, value in connection_with_secrets.items():
