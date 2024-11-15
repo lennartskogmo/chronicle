@@ -227,7 +227,6 @@ def load_full(
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
     ):
     validate_mode(mode=mode, valid=["insert_update", "insert_update_delete"])
-    reader = get_reader(reader=reader)
     writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     df = reader.read(table=source, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     return writer.write(df)
@@ -238,7 +237,6 @@ def load_incremental(
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
     ):
     validate_mode(mode=mode, valid=["insert_update"])
-    reader = get_reader(reader=reader)
     writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     max = get_max(table=target, column=bookmark_column, offset=bookmark_offset)
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
