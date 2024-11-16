@@ -36,11 +36,18 @@ def get_object(object):
 # Return new reader instance or None if no reader was found.
 def get_reader(connection):
     if isinstance(connection, str) or isinstance(connection, dict):
-        # Get connection configuration.
         connection_with_secrets = get_connection_with_secrets(connection)
         if connection_with_secrets is None:
             return None
-        # Map connection configuration to reader constructor arguments.
+        reader_arguments = map_reader_arguments(connection_with_secrets)
+        reader = globals()[connection_with_secrets["Reader"]]
+        return reader(**reader_arguments)
+    else:
+        raise Exception("Invalid connection")
+
+# Map connection configuration with secrets to reader constructor arguments.
+def map_reader_arguments(connection_with_secrets):
+    if isinstance(connection_with_secrets, dict):
         reader_arguments = {}
         for key, value in connection_with_secrets.items():
             if value is not None:
@@ -49,12 +56,9 @@ def get_reader(connection):
                 if key == "Database" : reader_arguments["database"] = value
                 if key == "Username" : reader_arguments["username"] = value
                 if key == "Password" : reader_arguments["password"] = value
-        # Instantiate reader.
-        reader = globals()[connection_with_secrets["Reader"]]
-        reader = reader(**reader_arguments)
-        return reader
+        return reader_arguments        
     else:
-        raise Exception("Invalid connection")
+        raise Exception("Invalid connection with secrets")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
