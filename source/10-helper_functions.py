@@ -37,7 +37,7 @@ def get_object(object):
 def get_reader(connection):
     if isinstance(connection, str) or isinstance(connection, dict):
         connection_with_secrets = get_connection_with_secrets(connection)
-        if connection_with_secrets is None:
+        if connection_with_secrets is None or "Reader" not in connection_with_secrets:
             return None
         reader_arguments = map_reader_arguments(connection_with_secrets)
         reader = globals()[connection_with_secrets["Reader"]]
