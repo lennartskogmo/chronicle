@@ -1,4 +1,5 @@
-#
+# Load object according to configuration.
+# Can either look up configuration based on object name or use configuration supplied through arguments.
 def load_object(object, connection=None, connection_with_secrets=None):
     # Prepare object configuration.
     if isinstance(object, str):
@@ -26,7 +27,7 @@ def load_object(object, connection=None, connection_with_secrets=None):
     function = globals()[object["Function"]]
     return function(**function_arguments)
 
-# Perform full load.
+# Perform full load from source to target.
 def load_full(
         reader, source, target, key, mode="insert_update_delete",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
@@ -36,7 +37,7 @@ def load_full(
     df = reader.read(table=source, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     return writer.write(df)
 
-# Perform incremental load.
+# Perform incremental load from source to target.
 def load_incremental(
         reader, source, target, key, bookmark_column, bookmark_offset=None, mode="insert_update",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
