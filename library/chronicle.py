@@ -85,9 +85,29 @@ def map_reader_arguments(connection_with_secrets):
                 if key == "Database" : reader_arguments["database"] = value
                 if key == "Username" : reader_arguments["username"] = value
                 if key == "Password" : reader_arguments["password"] = value
-        return reader_arguments        
+        return reader_arguments
     else:
         raise Exception("Invalid connection with secrets")
+
+# Map object configuration to function arguments.
+def map_function_arguments(object):
+    if isinstance(object, dict):
+        if "Function" not in object or object["Function"] not in ["load_full", "load_incremental"]:
+            raise Exception("Invalid function")
+        function_arguments = {}
+        for key, value in object.items():
+            if value is not None:
+                if key == "Mode"           : function_arguments["mode"]    = value
+                if key == "ObjectName"     : function_arguments["target"]  = value
+                if key == "ObjectSource"   : function_arguments["source"]  = value
+                if key == "KeyColumns"     : function_arguments["key"]     = value
+                if key == "ExcludeColumns" : function_arguments["exclude"] = value
+                if key == "IgnoreColumns"  : function_arguments["ignore"]  = value
+                if key == "HashColumns"    : function_arguments["hash"]    = value
+                if key == "DropColumns"    : function_arguments["drop"]    = value
+        return function_arguments
+    else:
+        raise Exception("Invalid object")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
@@ -224,6 +244,34 @@ def read_active(table, select=None):
     else:
         raise Exception("Invalid select")
 
+
+#
+def load_object(object, connection=None, connection_with_secrets=None):
+    # Prepare object configuration.
+    if isinstance(object, str):
+        object = get_object(object)
+    if not isinstance(object, dict):
+        raise Exception("Invalid object")
+    # Prepare connection configuration.
+    if connection is None:
+        connection = get_connection(object["ConnectionName"])
+    if not isinstance(connection, dict):
+        raise Exception("Invalid connection")
+    # Prepare connection configuration with secrets.
+    if connection_with_secrets is None:
+        connection_with_secrets = get_connection_with_secrets(connection)
+    if not isinstance(connection_with_secrets, dict):
+        raise Exception("Invalid connection with secrets")
+    # Map connection configuration with secrets to reader constructor arguments.
+    reader_arguments = map_reader_arguments(connection_with_secrets)
+    # Map object configuration to function arguments.
+    function_arguments = map_function_arguments(object)
+    # Instantiate reader.
+    reader = globals()[connection_with_secrets["Reader"]]
+    function_arguments["reader"] = reader(**reader_arguments)
+    # Invoke function.
+    function = globals()[object["Function"]]
+    return function(**function_arguments)
 
 # Perform full load.
 def load_full(
