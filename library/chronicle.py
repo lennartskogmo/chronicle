@@ -1,8 +1,12 @@
 # Databricks notebook source
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from os import environ
 from re import match, sub
+from time import sleep
 from urllib.parse import urlencode
-from pyspark.sql.functions import coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
+
+from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
@@ -558,3 +562,167 @@ class SqlserverReader(BaseJdbcReader):
             "user"     : username,
             "password" : password
         }
+
+
+class ObjectLoader:
+
+    def __init__(self, concurrency, tag):
+        self.queue = ObjectLoaderQueue(concurrency=concurrency, tag=tag)
+        self.executor = ThreadPoolExecutor(max_workers=concurrency)
+
+    def run(self):
+        futures = []
+        print(f"Objects : {self.queue.length}")
+        print(f"Concurrency : {self.queue.global_maximum_concurrency}\n")
+        while self.queue.not_empty():
+            # Get eligible objects including connection details from queue and submit them to executor.
+            while object := self.queue.get():
+                connection = self.queue.connections[object["ConnectionName"]]
+                connection_with_secrets = self.queue.connections_with_secrets[object["ConnectionName"]]
+                futures.append(self.executor.submit(self.__load_object, object, connection, connection_with_secrets))
+            # Check for completed futures and report back to queue.
+            completed = 0
+            for i, future in enumerate(futures):
+                if future.done():
+                    future = futures.pop(i)
+                    self.queue.complete(future.result())
+                    completed += 1
+            if completed > 0:
+                # Resort queue to maximize concurrency utilization.
+                self.queue.sort()
+            # Take a short nap so the main thread is not constantly calling queue.not_empty() and queue.get().
+            sleep(0.1)
+    
+    def __load_object(self, object, connection, connection_with_secrets):
+        attempt = 0
+        start = datetime.now()
+        while True:
+            try:
+                attempt += 1
+                if attempt == 1:
+                    print(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
+                else:
+                    print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
+                object["__rows"] = load_object(object, connection, connection_with_secrets)
+                break
+            except Exception as e:
+                if attempt >= 2:
+                    object["__exception"] = e
+                    break
+                sleep(5)
+        end = datetime.now()
+        object["__duration"] = int(round((end - start).total_seconds(), 0))
+        if "__rows" in object:
+            object["__status"] = "Completed"
+            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
+        else:
+            object["__status"] = "Failed"
+            print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+        return object
+    
+    def print_errors(self):
+        failed = 0
+        for object in self.queue.completed.values():
+            if object["__status"] == "Failed":
+                failed += 1
+                print(f"{object['ObjectName']}:")
+                print(object["__exception"])
+        if failed == 0:
+            print("No errors")
+
+
+class ObjectLoaderQueue:
+
+    length    = 0
+    queued    = {}
+    started   = {}
+    completed = {}
+    connections              = {}
+    connections_with_secrets = {}
+    global_maximum_concurrency = 0
+    global_current_concurrency = 0
+    connection_maximum_concurrency = {}
+    connection_current_concurrency = {}
+
+    # Initialize queue.
+    def __init__(self, concurrency, tag):
+        self.global_maximum_concurrency = concurrency
+        self.__populate(tag)
+        self.sort()
+        for connection_name, connection in self.queued.items():
+            self.connection_maximum_concurrency[connection_name] = connection["ConcurrencyLimit"]
+            self.connection_current_concurrency[connection_name] = 0
+            self.length += len(connection["Objects"])
+
+    # Populate queue with objects from database.
+    def __populate(self, tag):
+        if isinstance(tag, str):
+            tag = [tag]
+        if not isinstance(tag, list):
+            raise Exception("Invalid tag")
+        objects = spark.table(OBJECT).withColumn("__Tags", lit(tag)).where("Status = 'Active'").filter(arrays_overlap("Tags", "__Tags")).drop("__Tags")
+        connections = spark.table("__chronicle.connection").join(objects, ["ConnectionName"], "leftsemi")
+        objects = {row["ObjectName"] : row.asDict() for row in objects.collect()}
+        connections = {row["ConnectionName"] : row.asDict() for row in connections.collect()}
+        # Prepare dictionaries containing connection details with and without secrets.
+        for connection_name, connection in connections.items():
+            self.connections[connection_name] = {}
+            self.connections_with_secrets[connection_name] = {}
+            for key, value in connection.items():
+                self.connections[connection_name][key] = value
+                self.connections_with_secrets[connection_name][key] = resolve_secret(value)
+        # Prepare queued dictionary containing objects to be processed.
+        for connection_name in connections.keys():
+            connections[connection_name]["Objects"] = {}
+        for object in objects.values():
+            connections[object["ConnectionName"]]["Objects"][object["ObjectName"]] = object
+        self.queued = connections
+
+    # Return next eligible object.
+    def get(self):
+        # Find next eligible object.
+        object_name = None
+        if self.global_current_concurrency < self.global_maximum_concurrency:
+            for connection_name, connection in self.queued.items():
+                if self.connection_current_concurrency[connection_name] < self.connection_maximum_concurrency[connection_name]:
+                    if connection["Objects"]:
+                        object_name = list(connection["Objects"].keys())[0]
+                        break
+        # Register object as started and return object.
+        if object_name:
+            object = self.queued[connection_name]["Objects"].pop(object_name)
+            self.started[object_name] = object
+            self.connection_current_concurrency[connection_name] += 1
+            self.global_current_concurrency += 1
+            return object
+
+    # Register object as completed.
+    def complete(self, object):
+        object_name = object["ObjectName"]
+        connection_name = object["ConnectionName"]
+        self.started.pop(object_name)
+        self.completed[object_name] = object
+        self.connection_current_concurrency[connection_name] -= 1
+        self.global_current_concurrency -= 1
+        self.length -= 1
+
+    # Return true until all objects in queue have been processed.
+    def not_empty(self):
+        if self.length + len(self.started) > 0:
+            return True
+
+    # Sort queue so objects will be picked from connections that require the longest remaining time first.
+    def sort(self):
+        # Calculate score per connection.
+        score = {}
+        for connection_name, connection in self.queued.items():
+            if length := len(connection["Objects"]) > 0:
+                score[connection_name] = length / connection["ConcurrencyLimit"]
+            else:
+                score[connection_name] = 0
+        # Replace queue with new queue sorted by descending connection score.
+        connection_names = sorted(score, key=score.get, reverse=True)
+        queued = {}
+        for connection_name in connection_names:
+            queued[connection_name] = self.queued[connection_name]
+        self.queued = queued

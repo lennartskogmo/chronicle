@@ -1,7 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from os import environ
 from re import match, sub
+from time import sleep
 from urllib.parse import urlencode
-from pyspark.sql.functions import coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
+
+from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
