@@ -46,7 +46,9 @@ def add_checksum_column(df, ignore=None):
 def add_key_column(df, key):
     if isinstance(key, str):
         return df.select([df[conform_column_name(key)].alias(KEY), "*"])
-    elif isinstance(key, list):
+    elif isinstance(key, list) and len(key) == 1:
+        return df.select([df[conform_column_name(key[0])].alias(KEY), "*"])
+    elif isinstance(key, list) and len(key) > 1:
         key = sorted([conform_column_name(c) for c in key])
         return df.select([concat_ws("-", *key).alias(KEY), "*"])
     else:

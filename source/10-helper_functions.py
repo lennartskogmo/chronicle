@@ -36,11 +36,18 @@ def get_object(object):
 # Return new reader instance or None if no reader was found.
 def get_reader(connection):
     if isinstance(connection, str) or isinstance(connection, dict):
-        # Get connection configuration.
         connection_with_secrets = get_connection_with_secrets(connection)
-        if connection_with_secrets is None:
+        if connection_with_secrets is None or "Reader" not in connection_with_secrets:
             return None
-        # Map connection configuration to reader constructor arguments.
+        reader_arguments = map_reader_arguments(connection_with_secrets)
+        reader = globals()[connection_with_secrets["Reader"]]
+        return reader(**reader_arguments)
+    else:
+        raise Exception("Invalid connection")
+
+# Map connection configuration with secrets to reader constructor arguments.
+def map_reader_arguments(connection_with_secrets):
+    if isinstance(connection_with_secrets, dict):
         reader_arguments = {}
         for key, value in connection_with_secrets.items():
             if value is not None:
@@ -49,12 +56,29 @@ def get_reader(connection):
                 if key == "Database" : reader_arguments["database"] = value
                 if key == "Username" : reader_arguments["username"] = value
                 if key == "Password" : reader_arguments["password"] = value
-        # Instantiate reader.
-        reader = globals()[connection_with_secrets["Reader"]]
-        reader = reader(**reader_arguments)
-        return reader
+        return reader_arguments
     else:
-        raise Exception("Invalid connection")
+        raise Exception("Invalid connection with secrets")
+
+# Map object configuration to function arguments.
+def map_function_arguments(object):
+    if isinstance(object, dict):
+        if "Function" not in object or object["Function"] not in ["load_full", "load_incremental"]:
+            raise Exception("Invalid function")
+        function_arguments = {}
+        for key, value in object.items():
+            if value is not None:
+                if key == "Mode"           : function_arguments["mode"]    = value
+                if key == "ObjectName"     : function_arguments["target"]  = value
+                if key == "ObjectSource"   : function_arguments["source"]  = value
+                if key == "KeyColumns"     : function_arguments["key"]     = value
+                if key == "ExcludeColumns" : function_arguments["exclude"] = value
+                if key == "IgnoreColumns"  : function_arguments["ignore"]  = value
+                if key == "HashColumns"    : function_arguments["hash"]    = value
+                if key == "DropColumns"    : function_arguments["drop"]    = value
+        return function_arguments
+    else:
+        raise Exception("Invalid object")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
@@ -67,3 +91,15 @@ def resolve_secret(value):
 def validate_mode(valid, mode):
     if mode not in valid:
         raise Exception("Invalid mode")
+
+# Parse tag string and return tag list.
+def parse_tag(tag):
+    if isinstance(tag, str):
+        tag = tag.strip()
+        tag = sub(r"\s+", ",", tag)             # Replace multiple spaces with a single comma.
+        tag = sub(r",+", ",", tag)              # Replace multiple commas with a single comma.
+        tag = sub(r"[^A-Za-z0-9_,]+", "", tag)  # Remove everything except alphanumeric characters, underscores and commas.
+        tag = tag.split(",")
+        return tag
+    else:
+        raise Exception("Invalid tag")
