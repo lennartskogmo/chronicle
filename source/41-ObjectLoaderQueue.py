@@ -24,7 +24,7 @@ class ObjectLoaderQueue:
     # Populate queue with objects from database.
     def __populate(self, tag):
         if isinstance(tag, str):
-            tag = [tag]
+            tag = parse_tag(tag)
         if not isinstance(tag, list):
             raise Exception("Invalid tag")
         objects = spark.table(OBJECT).withColumn("__Tags", lit(tag)).where("Status = 'Active'").filter(arrays_overlap("Tags", "__Tags")).drop("__Tags")

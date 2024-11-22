@@ -125,6 +125,18 @@ def validate_mode(valid, mode):
     if mode not in valid:
         raise Exception("Invalid mode")
 
+# Parse tag string and return tag list.
+def parse_tag(tag):
+    if isinstance(tag, str):
+        tag = tag.strip()
+        tag = sub(r"\s+", ",", tag)             # Replace multiple spaces with a single comma.
+        tag = sub(r",+", ",", tag)              # Replace multiple commas with a single comma.
+        tag = sub(r"[^A-Za-z0-9_,]+", "", tag)  # Remove everything except alphanumeric characters, underscores and commas.
+        tag = tag.split(",")
+        return tag
+    else:
+        raise Exception("Invalid tag")
+
 
 # Apply column and row filters if present, else act as pass-through function and return unaltered data frame.
 def filter(df, exclude=None, where=None):
@@ -657,7 +669,7 @@ class ObjectLoaderQueue:
     # Populate queue with objects from database.
     def __populate(self, tag):
         if isinstance(tag, str):
-            tag = [tag]
+            tag = parse_tag(tag)
         if not isinstance(tag, list):
             raise Exception("Invalid tag")
         objects = spark.table(OBJECT).withColumn("__Tags", lit(tag)).where("Status = 'Active'").filter(arrays_overlap("Tags", "__Tags")).drop("__Tags")
