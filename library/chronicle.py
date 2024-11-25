@@ -23,6 +23,9 @@ CONNECTION = "__chronicle.connection"          # The data connection configurati
 OBJECT     = "__chronicle.object"              # The data object configuration table.
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
+# Define Snowflake compatibility mode.
+SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE") 
+
 # Define metadata column names.
 KEY        = "__key"        # The record primary key.
 CHECKSUM   = "__checksum"   # The record checksum.
@@ -113,18 +116,6 @@ def map_function_arguments(object):
     else:
         raise Exception("Invalid object")
 
-# Return secret if value contains reference to secret, otherwise return value.
-def resolve_secret(value):
-    if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
-        return dbutils.secrets.get(scope="kv", key=value[1:-1])
-    else:
-        return value
-
-# Validate mode against dynamic list of values.
-def validate_mode(valid, mode):
-    if mode not in valid:
-        raise Exception("Invalid mode")
-
 # Parse tag string and return tag list.
 def parse_tag(tag):
     if isinstance(tag, str):
@@ -136,6 +127,18 @@ def parse_tag(tag):
         return tag
     else:
         raise Exception("Invalid tag")
+
+# Return secret if value contains reference to secret, otherwise return value.
+def resolve_secret(value):
+    if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
+        return dbutils.secrets.get(scope="kv", key=value[1:-1])
+    else:
+        return value
+
+# Validate mode against dynamic list of values.
+def validate_mode(valid, mode):
+    if mode not in valid:
+        raise Exception("Invalid mode")
 
 
 # Apply column and row filters if present, else act as pass-through function and return unaltered data frame.
@@ -339,6 +342,10 @@ class DeltaBatchWriter:
             .option("delta.autoOptimize.autoCompact", "true")
         if EXTERNAL is not None:
             dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
+        if SNOWFLAKE is not None:
+            dw = dw.option("delta.checkpointPolicy", "classic")
+            dw = dw.option("delta.enableDeletionVectors", "false")
+            dw = dw.option("delta.enableRowTracking", "false")
         dw.saveAsTable(self.table)
     
     # Prepare data frame and Delta table for writing.
@@ -584,8 +591,8 @@ class ObjectLoader:
 
     def run(self):
         futures = []
-        print(f"Objects : {self.queue.length}")
-        print(f"Concurrency : {self.queue.global_maximum_concurrency}\n")
+        print(f"Concurrency : {self.queue.global_maximum_concurrency}")
+        print(f"Objects : {self.queue.length}\n")
         while self.queue.not_empty():
             # Get eligible objects including connection details from queue and submit them to executor.
             while object := self.queue.get():
