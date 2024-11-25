@@ -6,8 +6,8 @@ class ObjectLoader:
 
     def run(self):
         futures = []
-        print(f"Objects : {self.queue.length}")
-        print(f"Concurrency : {self.queue.global_maximum_concurrency}\n")
+        print(f"Concurrency : {self.queue.global_maximum_concurrency}")
+        print(f"Objects : {self.queue.length}\n")
         while self.queue.not_empty():
             # Get eligible objects including connection details from queue and submit them to executor.
             while object := self.queue.get():

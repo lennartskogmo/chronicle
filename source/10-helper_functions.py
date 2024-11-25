@@ -80,18 +80,6 @@ def map_function_arguments(object):
     else:
         raise Exception("Invalid object")
 
-# Return secret if value contains reference to secret, otherwise return value.
-def resolve_secret(value):
-    if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
-        return dbutils.secrets.get(scope="kv", key=value[1:-1])
-    else:
-        return value
-
-# Validate mode against dynamic list of values.
-def validate_mode(valid, mode):
-    if mode not in valid:
-        raise Exception("Invalid mode")
-
 # Parse tag string and return tag list.
 def parse_tag(tag):
     if isinstance(tag, str):
@@ -103,3 +91,15 @@ def parse_tag(tag):
         return tag
     else:
         raise Exception("Invalid tag")
+
+# Return secret if value contains reference to secret, otherwise return value.
+def resolve_secret(value):
+    if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
+        return dbutils.secrets.get(scope="kv", key=value[1:-1])
+    else:
+        return value
+
+# Validate mode against dynamic list of values.
+def validate_mode(valid, mode):
+    if mode not in valid:
+        raise Exception("Invalid mode")

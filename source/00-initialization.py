@@ -22,6 +22,9 @@ CONNECTION = "__chronicle.connection"          # The data connection configurati
 OBJECT     = "__chronicle.object"              # The data object configuration table.
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
+# Define Snowflake compatibility mode.
+SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE") 
+
 # Define metadata column names.
 KEY        = "__key"        # The record primary key.
 CHECKSUM   = "__checksum"   # The record checksum.
