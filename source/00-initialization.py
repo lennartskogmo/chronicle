@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from os import environ
 from re import match, sub
+from threading import Lock
 from time import sleep
 from urllib.parse import urlencode
 

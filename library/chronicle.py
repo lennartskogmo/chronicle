@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from os import environ
 from re import match, sub
+from threading import Lock
 from time import sleep
 from urllib.parse import urlencode
 
@@ -586,8 +587,9 @@ class SqlserverReader(BaseJdbcReader):
 class ObjectLoader:
 
     def __init__(self, concurrency, tag):
-        self.queue = ObjectLoaderQueue(concurrency=concurrency, tag=tag)
+        self.lock = Lock()
         self.executor = ThreadPoolExecutor(max_workers=concurrency)
+        self.queue = ObjectLoaderQueue(concurrency=concurrency, tag=tag)
 
     def run(self):
         futures = []
@@ -618,10 +620,12 @@ class ObjectLoader:
         while True:
             try:
                 attempt += 1
+                self.lock.acquire()
                 if attempt == 1:
                     print(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
                 else:
                     print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
+                self.lock.release()
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
                 break
             except Exception as e:
@@ -631,12 +635,14 @@ class ObjectLoader:
                 sleep(5)
         end = datetime.now()
         object["__duration"] = int(round((end - start).total_seconds(), 0))
+        self.lock.acquire()
         if "__rows" in object:
             object["__status"] = "Completed"
             print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
         else:
             object["__status"] = "Failed"
             print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+        self.lock.release()
         return object
     
     def print_errors(self):
