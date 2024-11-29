@@ -1,6 +1,6 @@
 # MySQL JDBC reader.
 # https://dev.mysql.com/downloads/connector/j/
-class MysqlReader(BaseJdbcReader):
+class MysqlReader(BaseReader):
 
     # Initialize reader.
     def __init__(self, host, port, database, username, password):
