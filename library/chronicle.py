@@ -88,11 +88,12 @@ def map_reader_arguments(connection_with_secrets):
         reader_arguments = {}
         for key, value in connection_with_secrets.items():
             if value is not None:
-                if key == "Host"     : reader_arguments["host"]     = value
-                if key == "Port"     : reader_arguments["port"]     = value
-                if key == "Database" : reader_arguments["database"] = value
-                if key == "Username" : reader_arguments["username"] = value
-                if key == "Password" : reader_arguments["password"] = value
+                if key == "Host"      : reader_arguments["host"]      = value
+                if key == "Port"      : reader_arguments["port"]      = value
+                if key == "Database"  : reader_arguments["database"]  = value
+                if key == "Username"  : reader_arguments["username"]  = value
+                if key == "Password"  : reader_arguments["password"]  = value
+                if key == "Warehouse" : reader_arguments["warehouse"] = value
         return reader_arguments
     else:
         raise Exception("Invalid connection with secrets")
