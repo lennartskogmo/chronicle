@@ -1,12 +1,12 @@
-# Base JDBC reader.
-class BaseJdbcReader:
+# Base reader.
+class BaseReader:
 
     # Read from table using single query.
-    def __read_single(self, table):
+    def _read_single(self, table):
         return spark.read.jdbc(properties=self.properties, url=self.url, table=table, numPartitions=1)
 
     # Read from table using multiple parallel queries.
-    def __read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
+    def _read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
         return spark.read.jdbc(
             properties    = self.properties,
             url           = self.url,
@@ -19,14 +19,14 @@ class BaseJdbcReader:
 
     # Execute query and return data frame.
     def query(self, query):
-        return self.__read_single(f"({query}) AS q")
+        return self._read_single(f"({query}) AS q")
 
     # Read from table and return data frame containing only key columns.
     def read_key(self, table, key, where=None):
         if isinstance(key, str):
-            df = self.__read_single(table).select(key)
+            df = self._read_single(table).select(key)
         elif isinstance(key, list):
-            df = self.__read_single(table).select(*key)
+            df = self._read_single(table).select(*key)
         else:
             raise Exception("Invalid key")
         return filter(df=df, where=where)
@@ -34,10 +34,10 @@ class BaseJdbcReader:
     # Read from table and return data frame.
     def read(self, table, exclude=None, where=None, parallel_column=None, parallel_number=None):
         if parallel_column is None and parallel_number is None:
-            df = self.__read_single(table)
+            df = self._read_single(table)
         elif parallel_column is not None and parallel_number is not None:
             bounds = self.get_bounds(table=table, parallel_column=parallel_column, where=where)
-            df = self.__read_parallel(
+            df = self._read_parallel(
                 table           = table,
                 parallel_column = parallel_column,
                 parallel_number = parallel_number,
@@ -51,10 +51,10 @@ class BaseJdbcReader:
     # Read from table and return data frame containing rows where the column value is equal to the provided value.
     def read_equal_to(self, table, column, value, exclude=None, where=None, parallel_column=None, parallel_number=None):
         if parallel_column is None and parallel_number is None:
-            df = self.__read_single(table)
+            df = self._read_single(table)
         elif parallel_column is not None and parallel_number is not None:
             bounds = self.get_bounds_equal_to(table=table, column=column, value=value, parallel_column=parallel_column, where=where)
-            df = self.__read_parallel(
+            df = self._read_parallel(
                 table           = table,
                 parallel_column = parallel_column,
                 parallel_number = parallel_number,
@@ -72,10 +72,10 @@ class BaseJdbcReader:
             return self.read(table=table, where=where, parallel_column=parallel_column, parallel_number=parallel_number)
         else:
             if parallel_column is None and parallel_number is None:
-                df = self.__read_single(table)
+                df = self._read_single(table)
             elif parallel_column is not None and parallel_number is not None:
                 bounds = self.get_bounds_greater_than(table=table, column=column, value=value, parallel_column=parallel_column, where=where)
-                df = self.__read_parallel(
+                df = self._read_parallel(
                     table           = table,
                     parallel_column = parallel_column,
                     parallel_number = parallel_number,

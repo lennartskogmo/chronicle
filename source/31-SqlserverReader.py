@@ -1,6 +1,6 @@
 # SQLServer JDBC reader.
 # https://docs.microsoft.com/en-us/sql/connect/jdbc/download-microsoft-jdbc-driver-for-sql-server?view=sql-server-ver15
-class SqlserverReader(BaseJdbcReader):
+class SqlserverReader(BaseReader):
 
     # Initialize reader.
     def __init__(self, host, port, database, username, password):

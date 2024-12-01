@@ -1,6 +1,6 @@
 # PostgreSQL JDBC reader.
 # https://jdbc.postgresql.org/download.html
-class PostgresqlReader(BaseJdbcReader):
+class PostgresqlReader(BaseReader):
 
     # Initialize reader.
     def __init__(self, host, port, database, username, password):
