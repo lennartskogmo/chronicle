@@ -7,12 +7,17 @@ rm -rf "$NAME"-0.0.1-py3-none-any.whl
 # Assemble notebook from source files.
 echo "# Databricks notebook source" > "$NAME".py
 declare -i i=1
-for file in ../source/*; do
+for file in ../source/*.py; do
     if [ $i -gt 1 ]; then echo -e "\n" >> "$NAME".py; fi
     cat $file >> "$NAME".py
     i+=1
 done
-
+for file in ../extension/*.py; do
+    if [ "$file" != "../extension/*.py" ]; then
+        echo -e "\n" >> "$NAME".py
+        cat $file >> "$NAME".py
+    fi
+done
 # Use docker to build python wheel.
 docker build -t "$NAME" .
 docker rmi $(docker images -f dangling=true -q)
