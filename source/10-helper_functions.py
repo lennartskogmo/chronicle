@@ -64,7 +64,7 @@ def map_reader_arguments(connection_with_secrets):
 # Map object configuration to function arguments.
 def map_function_arguments(object):
     if isinstance(object, dict):
-        if "Function" not in object or object["Function"] not in ["load_full", "load_incremental"]:
+        if "Function" not in object or not object["Function"].startswith("load_"):
             raise Exception("Invalid function")
         function_arguments = {}
         for key, value in object.items():
