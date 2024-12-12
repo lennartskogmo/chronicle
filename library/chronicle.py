@@ -101,7 +101,7 @@ def map_reader_arguments(connection_with_secrets):
 # Map object configuration to function arguments.
 def map_function_arguments(object):
     if isinstance(object, dict):
-        if "Function" not in object or object["Function"] not in ["load_full", "load_incremental"]:
+        if "Function" not in object or not object["Function"].startswith("load_"):
             raise Exception("Invalid function")
         function_arguments = {}
         for key, value in object.items():
@@ -286,13 +286,17 @@ def load_object(object, connection=None, connection_with_secrets=None):
         connection_with_secrets = get_connection_with_secrets(connection)
     if not isinstance(connection_with_secrets, dict):
         raise Exception("Invalid connection with secrets")
+    
     # Map connection configuration with secrets to reader constructor arguments.
     reader_arguments = map_reader_arguments(connection_with_secrets)
     # Map object configuration to function arguments.
     function_arguments = map_function_arguments(object)
-    # Instantiate reader.
-    reader = globals()[connection_with_secrets["Reader"]]
-    function_arguments["reader"] = reader(**reader_arguments)
+
+    # Instantiate reader if connection is associated with reader.
+    if "Reader" in connection_with_secrets and connection_with_secrets["Reader"] is not None:
+        reader = globals()[connection_with_secrets["Reader"]]
+        function_arguments["reader"] = reader(**reader_arguments)
+    
     # Invoke function.
     function = globals()[object["Function"]]
     return function(**function_arguments)
