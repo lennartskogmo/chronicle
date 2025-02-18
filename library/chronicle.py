@@ -25,7 +25,10 @@ OBJECT     = "__chronicle.object"              # The data object configuration t
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
 # Define Snowflake compatibility mode.
-SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE") 
+SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE")
+
+# Define aws parameter store support.
+PARAMETER_STORE = environ.get("CHRONICLE_PARAMETER_STORE")
 
 # Define metadata column names.
 KEY        = "__key"        # The record primary key.
@@ -33,6 +36,13 @@ CHECKSUM   = "__checksum"   # The record checksum.
 OPERATION  = "__operation"  # The type of operation that produced the record.
 LOADED     = "__loaded"     # The time the record was loaded.
 ANONYMIZED = "__anonymized" # Reserved for the time the record was anonymized.
+
+# Initialize ssm client.
+if PARAMETER_STORE is not None:
+    import boto3
+    aws_region    = spark.conf.get("spark.databricks.clusterUsageTags.region")
+    boto3_session = boto3.Session(region_name = aws_region)
+    SSM_CLIENT    = boto3_session.client('ssm')
 
 
 # Return dictionary containing connection configuration or None if no connection was found.
@@ -133,7 +143,10 @@ def parse_tag(tag):
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
     if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
-        return dbutils.secrets.get(scope="kv", key=value[1:-1])
+        if PARAMETER_STORE is not None:
+            return SSM_CLIENT.get_parameter(Name=value[1:-1], WithDecryption=True)['Parameter']['Value']
+        else:
+            return dbutils.secrets.get(scope="kv", key=value[1:-1])
     else:
         return value
 

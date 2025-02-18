@@ -96,7 +96,10 @@ def parse_tag(tag):
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
     if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
-        return dbutils.secrets.get(scope="kv", key=value[1:-1])
+        if PARAMETER_STORE is not None:
+            return SSM_CLIENT.get_parameter(Name=value[1:-1], WithDecryption=True)['Parameter']['Value']
+        else:
+            return dbutils.secrets.get(scope="kv", key=value[1:-1])
     else:
         return value
 
