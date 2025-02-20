@@ -23,7 +23,7 @@ class DeltaBatchWriter:
             .option("delta.autoOptimize.autoCompact", "true")
         if EXTERNAL is not None:
             dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
-        if SNOWFLAKE is not None:
+        if SNOWFLAKE_COMPATIBILITY is not None:
             dw = dw.option("delta.checkpointPolicy", "classic")
             dw = dw.option("delta.enableDeletionVectors", "false")
             dw = dw.option("delta.enableRowTracking", "false")

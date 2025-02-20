@@ -40,7 +40,7 @@ def add_checksum_column(df, ignore=None):
         columns = sorted(c for c in df.columns if c not in ignore)
     else:
         raise Exception("Invalid ignore")
-    return df.select([xxhash64(concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit('')) for c in columns])).alias(CHECKSUM), "*"])
+    return df.select([xxhash64(concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit("")) for c in columns])).alias(CHECKSUM), "*"])
 
 # Add KEY column to beginning of data frame.
 def add_key_column(df, key):
@@ -50,7 +50,7 @@ def add_key_column(df, key):
         return df.select([df[conform_column_name(key[0])].alias(KEY), "*"])
     elif isinstance(key, list) and len(key) > 1:
         key = sorted([conform_column_name(c) for c in key])
-        return df.select([concat_ws("-", *key).alias(KEY), "*"])
+        return df.select([concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit("")) for c in key]).alias(KEY), "*"])
     else:
         raise Exception("Invalid key")
 

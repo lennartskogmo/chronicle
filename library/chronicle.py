@@ -25,7 +25,7 @@ OBJECT     = "__chronicle.object"              # The data object configuration t
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
 # Define Snowflake compatibility mode.
-SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE")
+SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")
 
 # Define aws parameter store support.
 PARAMETER_STORE = environ.get("CHRONICLE_PARAMETER_STORE")
@@ -198,7 +198,7 @@ def add_checksum_column(df, ignore=None):
         columns = sorted(c for c in df.columns if c not in ignore)
     else:
         raise Exception("Invalid ignore")
-    return df.select([xxhash64(concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit('')) for c in columns])).alias(CHECKSUM), "*"])
+    return df.select([xxhash64(concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit("")) for c in columns])).alias(CHECKSUM), "*"])
 
 # Add KEY column to beginning of data frame.
 def add_key_column(df, key):
@@ -208,7 +208,7 @@ def add_key_column(df, key):
         return df.select([df[conform_column_name(key[0])].alias(KEY), "*"])
     elif isinstance(key, list) and len(key) > 1:
         key = sorted([conform_column_name(c) for c in key])
-        return df.select([concat_ws("-", *key).alias(KEY), "*"])
+        return df.select([concat_ws("<|>", *[coalesce(col(c).cast(StringType()), lit("")) for c in key]).alias(KEY), "*"])
     else:
         raise Exception("Invalid key")
 
@@ -361,7 +361,7 @@ class DeltaBatchWriter:
             .option("delta.autoOptimize.autoCompact", "true")
         if EXTERNAL is not None:
             dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
-        if SNOWFLAKE is not None:
+        if SNOWFLAKE_COMPATIBILITY is not None:
             dw = dw.option("delta.checkpointPolicy", "classic")
             dw = dw.option("delta.enableDeletionVectors", "false")
             dw = dw.option("delta.enableRowTracking", "false")

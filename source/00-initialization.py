@@ -24,7 +24,7 @@ OBJECT     = "__chronicle.object"              # The data object configuration t
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
 # Define Snowflake compatibility mode.
-SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE")
+SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")
 
 # Define aws parameter store support.
 PARAMETER_STORE = environ.get("CHRONICLE_PARAMETER_STORE")
