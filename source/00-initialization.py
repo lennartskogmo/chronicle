@@ -24,7 +24,10 @@ OBJECT     = "__chronicle.object"              # The data object configuration t
 EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
 
 # Define Snowflake compatibility mode.
-SNOWFLAKE  = environ.get("CHRONICLE_SNOWFLAKE") 
+SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")
+
+# Define aws parameter store support.
+PARAMETER_STORE = environ.get("CHRONICLE_PARAMETER_STORE")
 
 # Define metadata column names.
 KEY        = "__key"        # The record primary key.
@@ -32,3 +35,10 @@ CHECKSUM   = "__checksum"   # The record checksum.
 OPERATION  = "__operation"  # The type of operation that produced the record.
 LOADED     = "__loaded"     # The time the record was loaded.
 ANONYMIZED = "__anonymized" # Reserved for the time the record was anonymized.
+
+# Initialize ssm client.
+if PARAMETER_STORE is not None:
+    import boto3
+    aws_region    = spark.conf.get("spark.databricks.clusterUsageTags.region")
+    boto3_session = boto3.Session(region_name = aws_region)
+    SSM_CLIENT    = boto3_session.client('ssm')
