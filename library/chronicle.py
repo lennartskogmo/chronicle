@@ -623,10 +623,11 @@ class SnowflakeReader(BaseReader):
 
 class ObjectLoader:
 
-    def __init__(self, concurrency, tag):
-        self.lock = Lock()
-        self.executor = ThreadPoolExecutor(max_workers=concurrency)
-        self.queue = ObjectLoaderQueue(concurrency=concurrency, tag=tag)
+    def __init__(self, concurrency, tag, post_hook=None):
+        self.lock      = Lock()
+        self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
+        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tag=tag)
+        self.post_hook = post_hook
 
     def run(self):
         futures = []
@@ -664,6 +665,9 @@ class ObjectLoader:
                     print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
                 self.lock.release()
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
+                if self.post_hook is not None:
+                    post_hook = self.post_hook
+                    post_hook(object)
                 break
             except Exception as e:
                 if attempt >= 2:
