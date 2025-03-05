@@ -1,6 +1,7 @@
 # Databricks notebook source
-from chronicle import ObjectLoader
+# MAGIC %run ./chronicle.py
 
+# COMMAND ----------
 loader = ObjectLoader(concurrency = dbutils.widgets.get("concurrency"), tag = dbutils.widgets.get("tag"))
 
 # COMMAND ----------
