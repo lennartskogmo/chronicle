@@ -43,8 +43,7 @@ class ObjectLoader:
                 self.lock.release()
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
                 if self.post_hook is not None:
-                    post_hook = self.post_hook
-                    post_hook(object)
+                    self.post_hook(object)
                 break
             except Exception as e:
                 if attempt >= 2:
