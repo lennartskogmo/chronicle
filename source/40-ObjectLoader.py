@@ -43,7 +43,10 @@ class ObjectLoader:
                 self.lock.release()
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
                 if self.post_hook is not None:
-                    self.post_hook(object)
+                    try:
+                        self.post_hook(object)
+                    except Exception as e:
+                        object["__exception"] = e
                 break
             except Exception as e:
                 if attempt >= 2:
@@ -53,12 +56,12 @@ class ObjectLoader:
         end = datetime.now()
         object["__duration"] = int(round((end - start).total_seconds(), 0))
         self.lock.acquire()
-        if "__rows" in object:
-            object["__status"] = "Completed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
-        else:
+        if "__exception" in object:
             object["__status"] = "Failed"
             print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+        else:
+            object["__status"] = "Completed"
+            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
         self.lock.release()
         return object
     
