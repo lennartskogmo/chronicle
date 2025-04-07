@@ -37,6 +37,21 @@ OPERATION  = "__operation"  # The type of operation that produced the record.
 LOADED     = "__loaded"     # The time the record was loaded.
 ANONYMIZED = "__anonymized" # Reserved for the time the record was anonymized.
 
+# Define Snowflake reserved words.
+SNOWFLAKE_RESERVED = {
+    "account", "all", "alter", "and", "any", "as", "asc", "between", "by", "case", "cast",
+    "check", "column", "connect", "connection", "constraint", "create", "cross", "current",
+    "current_date", "current_time", "current_timestamp", "current_user", "database",
+    "delete", "desc", "distinct", "drop", "else", "exists", "false", "following", "for",
+    "from", "full", "grant", "group", "gscluster", "having", "ilike", "in", "increment",
+    "inner", "insert", "intersect", "into", "is", "issue", "join", "lateral", "left",
+    "like", "limit", "localtime", "localtimestamp", "minus", "natural", "not", "null",
+    "of", "on", "or", "order", "organization", "qualify", "regexp", "revoke", "right",
+    "rlike", "row", "rows", "sample", "schema", "select", "set", "some", "start", "table",
+    "tablesample", "then", "to", "trigger", "true", "try_cast", "union", "unique",
+    "update", "using", "values", "view", "when", "whenever", "where", "window", "with"
+}
+
 # Initialize ssm client.
 if PARAMETER_STORE is not None:
     import boto3
@@ -243,6 +258,9 @@ def conform_column_name(cn):
     cn = cn.lower()                                      # Convert to lower case.
     cn = sub("[^a-z0-9]+", "_", cn)                      # Replace all characters except letters and numbers with underscores.
     cn = sub("^_|_$", "", cn)                            # Remove leading and trailing underscores.
+    if SNOWFLAKE_COMPATIBILITY is not None:
+        if cn in SNOWFLAKE_RESERVED:
+            cn += "_"                                    # Add underscore postfix if column name is a snowflake reserved word. 
     return cn
 
 
