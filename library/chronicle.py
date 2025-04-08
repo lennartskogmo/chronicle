@@ -37,6 +37,21 @@ OPERATION  = "__operation"  # The type of operation that produced the record.
 LOADED     = "__loaded"     # The time the record was loaded.
 ANONYMIZED = "__anonymized" # Reserved for the time the record was anonymized.
 
+# Define Snowflake reserved words.
+SNOWFLAKE_RESERVED = {
+    "account", "all", "alter", "and", "any", "as", "asc", "between", "by", "case", "cast",
+    "check", "column", "connect", "connection", "constraint", "create", "cross", "current",
+    "current_date", "current_time", "current_timestamp", "current_user", "database",
+    "delete", "desc", "distinct", "drop", "else", "exists", "false", "following", "for",
+    "from", "full", "grant", "group", "gscluster", "having", "ilike", "in", "increment",
+    "inner", "insert", "intersect", "into", "is", "issue", "join", "lateral", "left",
+    "like", "limit", "localtime", "localtimestamp", "minus", "natural", "not", "null",
+    "of", "on", "or", "order", "organization", "qualify", "regexp", "revoke", "right",
+    "rlike", "row", "rows", "sample", "schema", "select", "set", "some", "start", "table",
+    "tablesample", "then", "to", "trigger", "true", "try_cast", "union", "unique",
+    "update", "using", "values", "view", "when", "whenever", "where", "window", "with"
+}
+
 # Initialize ssm client.
 if PARAMETER_STORE is not None:
     import boto3
@@ -116,14 +131,16 @@ def map_function_arguments(object):
         function_arguments = {}
         for key, value in object.items():
             if value is not None:
-                if key == "Mode"           : function_arguments["mode"]    = value
-                if key == "ObjectName"     : function_arguments["target"]  = value
-                if key == "ObjectSource"   : function_arguments["source"]  = value
-                if key == "KeyColumns"     : function_arguments["key"]     = value
-                if key == "ExcludeColumns" : function_arguments["exclude"] = value
-                if key == "IgnoreColumns"  : function_arguments["ignore"]  = value
-                if key == "HashColumns"    : function_arguments["hash"]    = value
-                if key == "DropColumns"    : function_arguments["drop"]    = value
+                if key == "Mode"           : function_arguments["mode"]            = value
+                if key == "ObjectName"     : function_arguments["target"]          = value
+                if key == "ObjectSource"   : function_arguments["source"]          = value
+                if key == "KeyColumns"     : function_arguments["key"]             = value
+                if key == "ExcludeColumns" : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"  : function_arguments["ignore"]          = value
+                if key == "HashColumns"    : function_arguments["hash"]            = value
+                if key == "DropColumns"    : function_arguments["drop"]            = value
+                if key == "BookmarkColumn" : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset" : function_arguments["bookmark_offset"] = value
         return function_arguments
     else:
         raise Exception("Invalid object")
@@ -241,6 +258,9 @@ def conform_column_name(cn):
     cn = cn.lower()                                      # Convert to lower case.
     cn = sub("[^a-z0-9]+", "_", cn)                      # Replace all characters except letters and numbers with underscores.
     cn = sub("^_|_$", "", cn)                            # Remove leading and trailing underscores.
+    if SNOWFLAKE_COMPATIBILITY is not None:
+        if cn in SNOWFLAKE_RESERVED:
+            cn += "_"                                    # Add underscore postfix if column name is a snowflake reserved word. 
     return cn
 
 
@@ -623,10 +643,11 @@ class SnowflakeReader(BaseReader):
 
 class ObjectLoader:
 
-    def __init__(self, concurrency, tag):
-        self.lock = Lock()
-        self.executor = ThreadPoolExecutor(max_workers=concurrency)
-        self.queue = ObjectLoaderQueue(concurrency=concurrency, tag=tag)
+    def __init__(self, concurrency, tag, post_hook=None):
+        self.lock      = Lock()
+        self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
+        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tag=tag)
+        self.post_hook = post_hook
 
     def run(self):
         futures = []
@@ -664,6 +685,11 @@ class ObjectLoader:
                     print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
                 self.lock.release()
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
+                if self.post_hook is not None:
+                    try:
+                        self.post_hook(object)
+                    except Exception as e:
+                        object["__exception"] = e
                 break
             except Exception as e:
                 if attempt >= 2:
@@ -673,12 +699,12 @@ class ObjectLoader:
         end = datetime.now()
         object["__duration"] = int(round((end - start).total_seconds(), 0))
         self.lock.acquire()
-        if "__rows" in object:
-            object["__status"] = "Completed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
-        else:
+        if "__exception" in object:
             object["__status"] = "Failed"
             print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+        else:
+            object["__status"] = "Completed"
+            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
         self.lock.release()
         return object
     

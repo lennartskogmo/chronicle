@@ -83,4 +83,7 @@ def conform_column_name(cn):
     cn = cn.lower()                                      # Convert to lower case.
     cn = sub("[^a-z0-9]+", "_", cn)                      # Replace all characters except letters and numbers with underscores.
     cn = sub("^_|_$", "", cn)                            # Remove leading and trailing underscores.
+    if SNOWFLAKE_COMPATIBILITY is not None:
+        if cn in SNOWFLAKE_RESERVED:
+            cn += "_"                                    # Add underscore postfix if column name is a snowflake reserved word. 
     return cn

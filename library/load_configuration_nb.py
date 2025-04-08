@@ -30,13 +30,10 @@ def write_objects():
     objects.repartition(1).write.format("delta").saveAsTable(OBJECT)
 
 # COMMAND ----------
-
 prepare_database()
 
 # COMMAND ----------
-
 write_connections()
 
 # COMMAND ----------
-
 write_objects()
