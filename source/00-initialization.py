@@ -22,7 +22,7 @@ CHRONICLE      = "__chronicle"                           # The configuration sch
 CONNECTION     = "__chronicle.connection"                # The data connection configuration table.
 OBJECT         = "__chronicle.object"                    # The data object configuration table.
 EXTERNAL_PATH  = environ.get("CHRONICLE_EXTERNAL_PATH")  # The path to external table storage location.
-TEMPORARY_PATH = environ.get("CHRONICLE_TEMPORARY_PATH") # The path to external table storage location.
+TEMPORARY_PATH = environ.get("CHRONICLE_TEMPORARY_PATH") # The path to temporary storage location.
 
 # Define Snowflake compatibility mode.
 SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")

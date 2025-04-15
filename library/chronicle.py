@@ -19,10 +19,11 @@ if __name__ != "__main__":
     dbutils = DBUtils(spark)
 
 # Define configuration locations.
-CHRONICLE  = "__chronicle"                     # The configuration schema.
-CONNECTION = "__chronicle.connection"          # The data connection configuration table.
-OBJECT     = "__chronicle.object"              # The data object configuration table.
-EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
+CHRONICLE      = "__chronicle"                           # The configuration schema.
+CONNECTION     = "__chronicle.connection"                # The data connection configuration table.
+OBJECT         = "__chronicle.object"                    # The data object configuration table.
+EXTERNAL_PATH  = environ.get("CHRONICLE_EXTERNAL_PATH")  # The path to external table storage location.
+TEMPORARY_PATH = environ.get("CHRONICLE_TEMPORARY_PATH") # The path to temporary storage location.
 
 # Define Snowflake compatibility mode.
 SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")
@@ -379,8 +380,8 @@ class DeltaBatchWriter:
             .clusterBy(KEY, LOADED, OPERATION) \
             .option("delta.autoOptimize.optimizeWrite", "true") \
             .option("delta.autoOptimize.autoCompact", "true")
-        if EXTERNAL is not None:
-            dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
+        if EXTERNAL_PATH is not None:
+            dw = dw.option("path", EXTERNAL_PATH + self.table.replace(".", "/"))
         if SNOWFLAKE_COMPATIBILITY is not None:
             dw = dw.option("delta.checkpointPolicy", "classic")
             dw = dw.option("delta.enableDeletionVectors", "false")
