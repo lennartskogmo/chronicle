@@ -651,9 +651,10 @@ class ObjectLoader:
         self.post_hook = post_hook
 
     def run(self):
+        self.__log(f"Concurrency : {self.queue.global_maximum_concurrency}")
+        self.__log(f"Connections : {len(self.queue.connections)}")
+        self.__log(f"Objects : {self.queue.length}\n")
         futures = []
-        print(f"Concurrency : {self.queue.global_maximum_concurrency}")
-        print(f"Objects : {self.queue.length}\n")
         while self.queue.not_empty():
             # Get eligible objects including connection details from queue and submit them to executor.
             while object := self.queue.get():
@@ -679,12 +680,10 @@ class ObjectLoader:
         while True:
             try:
                 attempt += 1
-                self.lock.acquire()
                 if attempt == 1:
-                    print(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
+                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
                 else:
-                    print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
-                self.lock.release()
+                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
                 if self.post_hook is not None:
                     try:
@@ -699,16 +698,19 @@ class ObjectLoader:
                 sleep(5)
         end = datetime.now()
         object["__duration"] = int(round((end - start).total_seconds(), 0))
-        self.lock.acquire()
         if "__exception" in object:
             object["__status"] = "Failed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
         else:
             object["__status"] = "Completed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
-        self.lock.release()
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
         return object
     
+    def __log(self, message):
+        self.lock.acquire()
+        print(message)
+        self.lock.release()
+
     def print_errors(self):
         failed = 0
         for object in self.queue.completed.values():
