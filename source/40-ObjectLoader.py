@@ -72,7 +72,7 @@ class ObjectLoader:
         for object in self.queue.completed.values():
             if object["__status"] == "Failed":
                 failed += 1
-                print(f"{object['ObjectName']}:")
-                print(object["__exception"])
+                self.__log(f"{object['ObjectName']}:")
+                self.__log(object["__exception"])
         if failed == 0:
-            print("No errors")
+            self.__log("No errors")
