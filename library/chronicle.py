@@ -470,7 +470,12 @@ class BaseReader:
 
     # Read from table using single query.
     def _read_single(self, table):
-        return spark.read.jdbc(properties=self.properties, url=self.url, table=table, numPartitions=1)
+        return spark.read.jdbc(
+            properties    = self.properties,
+            url           = self.url,
+            table         = table,
+            numPartitions = 1
+        )
 
     # Read from table using multiple parallel queries.
     def _read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
