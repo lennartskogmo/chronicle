@@ -777,11 +777,13 @@ class ObjectLoaderQueue:
             for key, value in connection.items():
                 self.connections[connection_name][key] = value
                 self.connections_with_secrets[connection_name][key] = resolve_secret(value)
-        # Prepare queued dictionary containing objects to be processed.
+        # Prepare nested queued dictionary containing objects to be processed.
         for connection_name in connections.keys():
             connections[connection_name]["Objects"] = {}
         for object in objects.values():
             connections[object["ConnectionName"]]["Objects"][object["ObjectName"]] = object
+        for connection_name, connection in connections.items():
+            connections[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1]['ConcurrencyNumber'], reverse=True))
         self.queued = connections
 
     # Return next eligible object.
