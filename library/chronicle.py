@@ -824,7 +824,8 @@ class ObjectLoaderQueue:
         # Calculate score per connection.
         score = {}
         for connection_name, connection in self.queued.items():
-            if length := len(connection["Objects"]) > 0:
+            length = len(connection["Objects"])
+            if length > 0:
                 score[connection_name] = length / connection["ConcurrencyLimit"]
             else:
                 score[connection_name] = 0
