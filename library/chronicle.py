@@ -916,7 +916,7 @@ class DataObject:
         self.__connection = connection
 
     def load(self):
-        print(self.Function)
+        print(self.__connection)
 
 
 class DataObjectCollection:
@@ -1007,6 +1007,7 @@ class DataObjectRepository:
         # Instantiate collection.
         self.__collection = DataObjectCollection(objects)
 
+    # Return object or None if object does not exist.
     def get_object(self, object_name):
         if not isinstance(object_name, str) or object_name.strip() == "":
             raise Exception("Invalid object name")

@@ -40,4 +40,4 @@ class DataObject:
         self.__connection = connection
 
     def load(self):
-        print(self.Function)
+        print(self.__connection)
