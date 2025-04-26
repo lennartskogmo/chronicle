@@ -21,8 +21,8 @@ class DeltaBatchWriter:
             .clusterBy(KEY, LOADED, OPERATION) \
             .option("delta.autoOptimize.optimizeWrite", "true") \
             .option("delta.autoOptimize.autoCompact", "true")
-        if EXTERNAL is not None:
-            dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
+        if EXTERNAL_PATH is not None:
+            dw = dw.option("path", EXTERNAL_PATH + self.table.replace(".", "/"))
         if SNOWFLAKE_COMPATIBILITY is not None:
             dw = dw.option("delta.checkpointPolicy", "classic")
             dw = dw.option("delta.enableDeletionVectors", "false")

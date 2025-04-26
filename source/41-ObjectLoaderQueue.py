@@ -31,6 +31,14 @@ class ObjectLoaderQueue:
         connections = spark.table("__chronicle.connection").join(objects, ["ConnectionName"], "leftsemi")
         objects = {row["ObjectName"] : row.asDict() for row in objects.collect()}
         connections = {row["ConnectionName"] : row.asDict() for row in connections.collect()}
+        # Set object concurrency number.
+        for object_name, object in objects.items():
+            concurrency_number = 1
+            if "ConcurrencyNumber" in object and isinstance(object["ConcurrencyNumber"], int) and object["ConcurrencyNumber"] > concurrency_number:
+                concurrency_number = object["ConcurrencyNumber"]
+            if "PartitionNumber" in object and isinstance(object["PartitionNumber"], int) and object["PartitionNumber"] > concurrency_number:
+                concurrency_number = object["PartitionNumber"]
+            objects[object_name]["ConcurrencyNumber"] = concurrency_number
         # Prepare dictionaries containing connection details with and without secrets.
         for connection_name, connection in connections.items():
             self.connections[connection_name] = {}
@@ -38,11 +46,13 @@ class ObjectLoaderQueue:
             for key, value in connection.items():
                 self.connections[connection_name][key] = value
                 self.connections_with_secrets[connection_name][key] = resolve_secret(value)
-        # Prepare queued dictionary containing objects to be processed.
+        # Prepare nested queued dictionary containing objects to be processed.
         for connection_name in connections.keys():
             connections[connection_name]["Objects"] = {}
         for object in objects.values():
             connections[object["ConnectionName"]]["Objects"][object["ObjectName"]] = object
+        for connection_name, connection in connections.items():
+            connections[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1]['ConcurrencyNumber'], reverse=True))
         self.queued = connections
 
     # Return next eligible object.
@@ -83,7 +93,8 @@ class ObjectLoaderQueue:
         # Calculate score per connection.
         score = {}
         for connection_name, connection in self.queued.items():
-            if length := len(connection["Objects"]) > 0:
+            length = len(connection["Objects"])
+            if length > 0:
                 score[connection_name] = length / connection["ConcurrencyLimit"]
             else:
                 score[connection_name] = 0

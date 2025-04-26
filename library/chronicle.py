@@ -19,10 +19,11 @@ if __name__ != "__main__":
     dbutils = DBUtils(spark)
 
 # Define configuration locations.
-CHRONICLE  = "__chronicle"                     # The configuration schema.
-CONNECTION = "__chronicle.connection"          # The data connection configuration table.
-OBJECT     = "__chronicle.object"              # The data object configuration table.
-EXTERNAL   = environ.get("CHRONICLE_EXTERNAL") # The path to external table storage location.
+CHRONICLE      = "__chronicle"                           # The configuration schema.
+CONNECTION     = "__chronicle.connection"                # The data connection configuration table.
+OBJECT         = "__chronicle.object"                    # The data object configuration table.
+EXTERNAL_PATH  = environ.get("CHRONICLE_EXTERNAL_PATH")  # The path to external table storage location.
+TEMPORARY_PATH = environ.get("CHRONICLE_TEMPORARY_PATH") # The path to temporary storage location.
 
 # Define Snowflake compatibility mode.
 SNOWFLAKE_COMPATIBILITY = environ.get("CHRONICLE_SNOWFLAKE_COMPATIBILITY")
@@ -131,16 +132,18 @@ def map_function_arguments(object):
         function_arguments = {}
         for key, value in object.items():
             if value is not None:
-                if key == "Mode"           : function_arguments["mode"]            = value
-                if key == "ObjectName"     : function_arguments["target"]          = value
-                if key == "ObjectSource"   : function_arguments["source"]          = value
-                if key == "KeyColumns"     : function_arguments["key"]             = value
-                if key == "ExcludeColumns" : function_arguments["exclude"]         = value
-                if key == "IgnoreColumns"  : function_arguments["ignore"]          = value
-                if key == "HashColumns"    : function_arguments["hash"]            = value
-                if key == "DropColumns"    : function_arguments["drop"]            = value
-                if key == "BookmarkColumn" : function_arguments["bookmark_column"] = value
-                if key == "BookmarkOffset" : function_arguments["bookmark_offset"] = value
+                if key == "Mode"            : function_arguments["mode"]            = value
+                if key == "ObjectName"      : function_arguments["target"]          = value
+                if key == "ObjectSource"    : function_arguments["source"]          = value
+                if key == "KeyColumns"      : function_arguments["key"]             = value
+                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
+                if key == "HashColumns"     : function_arguments["hash"]            = value
+                if key == "DropColumns"     : function_arguments["drop"]            = value
+                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
+                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
+                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
         return function_arguments
     else:
         raise Exception("Invalid object")
@@ -379,8 +382,8 @@ class DeltaBatchWriter:
             .clusterBy(KEY, LOADED, OPERATION) \
             .option("delta.autoOptimize.optimizeWrite", "true") \
             .option("delta.autoOptimize.autoCompact", "true")
-        if EXTERNAL is not None:
-            dw = dw.option("path", EXTERNAL + self.table.replace(".", "/"))
+        if EXTERNAL_PATH is not None:
+            dw = dw.option("path", EXTERNAL_PATH + self.table.replace(".", "/"))
         if SNOWFLAKE_COMPATIBILITY is not None:
             dw = dw.option("delta.checkpointPolicy", "classic")
             dw = dw.option("delta.enableDeletionVectors", "false")
@@ -467,7 +470,12 @@ class BaseReader:
 
     # Read from table using single query.
     def _read_single(self, table):
-        return spark.read.jdbc(properties=self.properties, url=self.url, table=table, numPartitions=1)
+        return spark.read.jdbc(
+            properties    = self.properties,
+            url           = self.url,
+            table         = table,
+            numPartitions = 1
+        )
 
     # Read from table using multiple parallel queries.
     def _read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
@@ -650,9 +658,10 @@ class ObjectLoader:
         self.post_hook = post_hook
 
     def run(self):
+        self.__log(f"Concurrency : {self.queue.global_maximum_concurrency}")
+        self.__log(f"Connections : {len(self.queue.connections)}")
+        self.__log(f"Objects : {self.queue.length}\n")
         futures = []
-        print(f"Concurrency : {self.queue.global_maximum_concurrency}")
-        print(f"Objects : {self.queue.length}\n")
         while self.queue.not_empty():
             # Get eligible objects including connection details from queue and submit them to executor.
             while object := self.queue.get():
@@ -678,12 +687,10 @@ class ObjectLoader:
         while True:
             try:
                 attempt += 1
-                self.lock.acquire()
                 if attempt == 1:
-                    print(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
+                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
                 else:
-                    print(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
-                self.lock.release()
+                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
                 object["__rows"] = load_object(object, connection, connection_with_secrets)
                 if self.post_hook is not None:
                     try:
@@ -698,25 +705,28 @@ class ObjectLoader:
                 sleep(5)
         end = datetime.now()
         object["__duration"] = int(round((end - start).total_seconds(), 0))
-        self.lock.acquire()
         if "__exception" in object:
             object["__status"] = "Failed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
         else:
             object["__status"] = "Completed"
-            print(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
-        self.lock.release()
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
         return object
     
+    def __log(self, message):
+        self.lock.acquire()
+        print(message)
+        self.lock.release()
+
     def print_errors(self):
         failed = 0
         for object in self.queue.completed.values():
             if object["__status"] == "Failed":
                 failed += 1
-                print(f"{object['ObjectName']}:")
-                print(object["__exception"])
+                self.__log(f"{object['ObjectName']}:")
+                self.__log(object["__exception"])
         if failed == 0:
-            print("No errors")
+            self.__log("No errors")
 
 
 class ObjectLoaderQueue:
@@ -752,6 +762,14 @@ class ObjectLoaderQueue:
         connections = spark.table("__chronicle.connection").join(objects, ["ConnectionName"], "leftsemi")
         objects = {row["ObjectName"] : row.asDict() for row in objects.collect()}
         connections = {row["ConnectionName"] : row.asDict() for row in connections.collect()}
+        # Set object concurrency number.
+        for object_name, object in objects.items():
+            concurrency_number = 1
+            if "ConcurrencyNumber" in object and isinstance(object["ConcurrencyNumber"], int) and object["ConcurrencyNumber"] > concurrency_number:
+                concurrency_number = object["ConcurrencyNumber"]
+            if "PartitionNumber" in object and isinstance(object["PartitionNumber"], int) and object["PartitionNumber"] > concurrency_number:
+                concurrency_number = object["PartitionNumber"]
+            objects[object_name]["ConcurrencyNumber"] = concurrency_number
         # Prepare dictionaries containing connection details with and without secrets.
         for connection_name, connection in connections.items():
             self.connections[connection_name] = {}
@@ -759,11 +777,13 @@ class ObjectLoaderQueue:
             for key, value in connection.items():
                 self.connections[connection_name][key] = value
                 self.connections_with_secrets[connection_name][key] = resolve_secret(value)
-        # Prepare queued dictionary containing objects to be processed.
+        # Prepare nested queued dictionary containing objects to be processed.
         for connection_name in connections.keys():
             connections[connection_name]["Objects"] = {}
         for object in objects.values():
             connections[object["ConnectionName"]]["Objects"][object["ObjectName"]] = object
+        for connection_name, connection in connections.items():
+            connections[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1]['ConcurrencyNumber'], reverse=True))
         self.queued = connections
 
     # Return next eligible object.
@@ -804,7 +824,8 @@ class ObjectLoaderQueue:
         # Calculate score per connection.
         score = {}
         for connection_name, connection in self.queued.items():
-            if length := len(connection["Objects"]) > 0:
+            length = len(connection["Objects"])
+            if length > 0:
                 score[connection_name] = length / connection["ConcurrencyLimit"]
             else:
                 score[connection_name] = 0
