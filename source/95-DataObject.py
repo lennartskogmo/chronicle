@@ -2,6 +2,7 @@ class DataObject:
 
     __connection = None
 
+    # Initialize object.
     def __init__(self, configuration):
         if not isinstance(configuration, dict):
             raise Exception("Invalid configuration")
@@ -9,6 +10,7 @@ class DataObject:
             setattr(self, key, value)
         self.__validate_configuration()
     
+    # Validate configuration attributes.
     def __validate_configuration(self):
         # Validate mandatory ObjectName.
         if not hasattr(self, "ObjectName"):
