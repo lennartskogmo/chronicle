@@ -23,7 +23,7 @@ class DataObjectRepository:
 
     def get_object(self, object_name):
         if not isinstance(object_name, str) or object_name.strip() == "":
-            raise Exception("Invalid connection name")
+            raise Exception("Invalid object name")
         return self.__collection[object_name]
 
     # Return collection containing all objects.
