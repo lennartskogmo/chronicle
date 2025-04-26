@@ -849,7 +849,7 @@ class DataConnection:
             setattr(self, key, value)
 
 
-class DataConnectionRepository:
+class DataConnectionRepository: # [OK]
 
     __connections = {}
     __instance    = None
@@ -862,7 +862,7 @@ class DataConnectionRepository:
 
     # Initialize repository.
     def __init__(self):
-        # Read data from Delta tables.
+        # Read data from Delta table.
         connections = spark.table(CONNECTION)
         # Instantiate connections.
         self.__connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
@@ -997,19 +997,19 @@ class DataObjectRepository:
 
     # Initialize repository.
     def __init__(self):
-        # Read data from Delta tables.
+        # Read data from Delta table.
         objects = spark.table(OBJECT)
-        connections = spark.table(CONNECTION).join(objects, ["ConnectionName"], "leftsemi")
-        # Instantiate connections.
-        connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
         # Instantiate objects.
+        repo = DataConnectionRepository()
         objects = {row["ObjectName"] : DataObject(row.asDict()) for row in objects.collect()}
         for object_name, object in objects.items():
-            object.set_connection(connections[object.ConnectionName])
+            object.set_connection(repo.get_connection(object.ConnectionName))
         # Instantiate collection.
         self.__collection = DataObjectCollection(objects)
 
     def get_object(self, object_name):
+        if not isinstance(object_name, str) or object_name.strip() == "":
+            raise Exception("Invalid connection name")
         return self.__collection[object_name]
 
     # Return collection containing all objects.

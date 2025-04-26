@@ -1,4 +1,4 @@
-class DataConnectionRepository:
+class DataConnectionRepository: # [OK]
 
     __connections = {}
     __instance    = None
@@ -11,7 +11,7 @@ class DataConnectionRepository:
 
     # Initialize repository.
     def __init__(self):
-        # Read data from Delta tables.
+        # Read data from Delta table.
         connections = spark.table(CONNECTION)
         # Instantiate connections.
         self.__connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
