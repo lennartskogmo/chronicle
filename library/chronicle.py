@@ -835,3 +835,183 @@ class ObjectLoaderQueue:
         for connection_name in connection_names:
             queued[connection_name] = self.queued[connection_name]
         self.queued = queued
+
+
+class DataConnection:
+
+    __secrets = {}
+
+    # Initialize connection.
+    def __init__(self, configuration):
+        if not isinstance(configuration, dict):
+            raise Exception("Invalid configuration")
+        for key, value in configuration.items():
+            setattr(self, key, value)
+
+
+class DataConnectionRepository:
+
+    __connections = {}
+    __instance    = None
+
+    # Implement singleton behaviour.
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    # Initialize repository.
+    def __init__(self):
+        # Read data from Delta tables.
+        connections = spark.table(CONNECTION)
+        # Instantiate connections.
+        self.__connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
+
+    # Return connection or None if connection does not exist.
+    def get_connection(self, connection_name):
+        if not isinstance(connection_name, str) or connection_name.strip() == "":
+            raise Exception("Invalid connection name")
+        return self.__connections.get(connection_name)
+
+
+class DataObject:
+
+    __connection = None
+
+    # Initialize object.
+    def __init__(self, configuration):
+        if not isinstance(configuration, dict):
+            raise Exception("Invalid configuration")
+        for key, value in configuration.items():
+            setattr(self, key, value)
+        self.__validate_configuration()
+    
+    # Validate configuration attributes.
+    def __validate_configuration(self):
+        # Validate mandatory ObjectName.
+        if not hasattr(self, "ObjectName"):
+            raise Exception(f"Missing ObjectName in {vars(self)}")
+        if not isinstance(self.ObjectName, str) or self.ObjectName.strip() == "":
+            raise Exception(f"Invalid ObjectName in {vars(self)}")
+
+        # Validate mandatory ConnectionName.
+        if not hasattr(self, "ConnectionName"):
+            raise Exception(f"Missing ConnectionName in {self.ObjectName}")
+        if not isinstance(self.ConnectionName, str) or self.ConnectionName.strip() == "":
+            raise Exception(f"Invalid ConnectionName in {self.ObjectName}")
+
+        # Validate mandatory Status.
+        if not hasattr(self, "Status"):
+            raise Exception(f"Missing Status in {self.ObjectName}")
+        if not isinstance(self.Status, str) or not self.Status in ["Active", "Inactive"]:
+            raise Exception(f"Invalid Status in {self.ObjectName}")
+
+        # Validate optional Tags.
+        if hasattr(self, "Tags") and not isinstance(self.Tags, list):
+            raise Exception(f"Invalid Tags in {self.ObjectName}")
+
+    def set_connection(self, connection):
+        if self.__connection is not None:
+            raise Exception("Connection already set")
+        self.__connection = connection
+
+    def load(self):
+        print(self.Function)
+
+
+class DataObjectCollection:
+
+    __objects = {}
+
+    # Initialize collection.
+    def __init__(self, objects):
+        if not isinstance(objects, dict):
+            raise Exception("Invalid objects")
+        self.__objects = objects
+        # MAYBE: Validate object class.
+
+    def __getitem__(self, object_name):
+        return self.__objects.get(object_name)
+    
+    def __len__(self):
+        return len(self.__objects)
+    
+    def items(self):
+        return self.__objects.items()
+    
+    def keys(self):
+        return self.__objects.keys()
+
+    def values(self):
+        return self.__objects.values()
+    
+    # Return new subcollection containing only active objects.
+    def active(self):
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.Status == "Active":
+                objects[object_name] = object
+        return DataObjectCollection(objects)
+    
+    # Return new subcollection containing only inactive objects.
+    def inactive(self):
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.Status == "Inactive":
+                objects[object_name] = object
+        return DataObjectCollection(objects)
+    
+    # Return new subcollection containing only objects with matching connection name.
+    def connection(self, connection_name):
+        if not isinstance(connection_name, str):
+            raise Exception("Invalid connection name")
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.ConnectionName == connection_name:
+                objects[object_name] = object
+        return DataObjectCollection(objects)
+
+    # Return new subcollection containing only objects with atleast one matching tag.
+    def tags(self, tags):
+        if isinstance(tags, str):
+            tags = parse_tag(tags)
+        if not isinstance(tags, list):
+            raise Exception("Invalid tags")
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if hasattr(object, "Tags") and any(item in object.Tags for item in tags):
+                objects[object_name] = object
+        return DataObjectCollection(objects)
+
+
+class DataObjectRepository:
+
+    __collection = None
+    __instance   = None
+
+    # Implement singleton behaviour.
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    # Initialize repository.
+    def __init__(self):
+        # Read data from Delta tables.
+        objects = spark.table(OBJECT)
+        connections = spark.table(CONNECTION).join(objects, ["ConnectionName"], "leftsemi")
+        # Instantiate connections.
+        connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
+        # Instantiate objects.
+        objects = {row["ObjectName"] : DataObject(row.asDict()) for row in objects.collect()}
+        for object_name, object in objects.items():
+            object.set_connection(connections[object.ConnectionName])
+        # Instantiate collection.
+        self.__collection = DataObjectCollection(objects)
+
+    def get_object(self, object_name):
+        return self.__collection[object_name]
+
+    # Return collection containing all objects.
+    def get_objects(self):
+        return self.__collection
