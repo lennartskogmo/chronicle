@@ -984,7 +984,7 @@ class DataObjectCollection:
         return DataObjectCollection(objects)
 
 
-class DataObjectRepository:
+class DataObjectRepository: # [OK]
 
     __collection = None
     __instance   = None

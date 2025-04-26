@@ -1,4 +1,4 @@
-class DataObjectRepository:
+class DataObjectRepository: # [OK]
 
     __collection = None
     __instance   = None
