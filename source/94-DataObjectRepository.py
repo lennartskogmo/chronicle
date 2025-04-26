@@ -11,10 +11,10 @@ class DataObjectRepository:
 
     # Initialize repository.
     def __init__(self):
+        repo = DataConnectionRepository()
         # Read data from Delta table.
         objects = spark.table(OBJECT)
         # Instantiate objects.
-        repo = DataConnectionRepository()
         objects = {row["ObjectName"] : DataObject(row.asDict()) for row in objects.collect()}
         for object_name, object in objects.items():
             object.set_connection(repo.get_connection(object.ConnectionName))
