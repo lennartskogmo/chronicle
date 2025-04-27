@@ -861,7 +861,8 @@ class DataConnection:
         if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
             raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
 
-    def __get_secrets(self):
+    # Return secrets collection containing configuration including secrets.
+    def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize secrets collection the first time method is called.
         if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
             print(f"Init {self.ConnectionName}")
@@ -872,7 +873,7 @@ class DataConnection:
         return self.__secrets
 
     def test(self):
-        print(self.__get_secrets())
+        print(self.__get_configuration_with_secrets())
 
 
 class DataConnectionRepository:
