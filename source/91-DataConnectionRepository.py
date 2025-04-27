@@ -1,4 +1,4 @@
-class DataConnectionRepository:
+class DataConnectionRepository: # [OK]
 
     __instance = None
 

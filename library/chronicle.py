@@ -883,7 +883,7 @@ class DataConnection:
         pprint.pprint(self.__get_configuration_with_secrets())
 
 
-class DataConnectionRepository:
+class DataConnectionRepository: # [OK]
 
     __instance = None
 
@@ -1017,7 +1017,7 @@ class DataObjectCollection:
         return DataObjectCollection(objects)
 
 
-class DataObjectRepository:
+class DataObjectRepository: # [OK]
 
     __instance = None
 
