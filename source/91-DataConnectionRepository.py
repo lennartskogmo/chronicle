@@ -1,7 +1,6 @@
 class DataConnectionRepository:
 
-    __connections = {}
-    __instance    = None
+    __instance = None
 
     # Implement singleton behaviour.
     def __new__(cls):
