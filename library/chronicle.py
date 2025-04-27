@@ -864,19 +864,21 @@ class DataConnection:
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize secrets dictionary the first time method is called.
-        if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
+        if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
             print(f"Init {self.ConnectionName}")
             secrets = {}
             for secret_name, secret in vars(self).items():
                 secret = resolve_secret(secret)
-                def get_secret():
+                def get_value():
                     return secret
                 secrets[secret_name] = get_secret
-            self.__secrets = secrets
-        return self.__secrets
+            self.__configuration_with_secrets = secrets
+        return self.__configuration_with_secrets
 
     def test(self):
-        print(self.__get_configuration_with_secrets())
+        import pprint
+        pprint(self)
+        pprint(self.__get_configuration_with_secrets())
 
 
 class DataConnectionRepository:
@@ -1044,24 +1046,3 @@ class DataObjectRepository:
     # Return collection containing all objects.
     def get_objects(self):
         return self.__collection
-
-
-class SecretCollection: # [OK]
-
-    # Initialize collection.
-    def __init__(self, secrets):
-        if not isinstance(secrets, dict):
-            raise Exception("Invalid secrets")
-        self.__secrets = {}
-        for secret_name, secret in secrets.items():
-            self.__set_secret(secret_name, secret)
-
-    # Wrap secret in function and store it.
-    def __set_secret(self, secret_name, secret):
-        def get_secret():
-            return secret
-        self.__secrets[secret_name] = get_secret
-
-    # Implement items dictionary interface method.
-    def items(self):
-        return self.__secrets.items()

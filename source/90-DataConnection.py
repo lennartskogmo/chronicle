@@ -25,16 +25,18 @@ class DataConnection:
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize secrets dictionary the first time method is called.
-        if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
+        if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
             print(f"Init {self.ConnectionName}")
             secrets = {}
             for secret_name, secret in vars(self).items():
                 secret = resolve_secret(secret)
-                def get_secret():
+                def get_value():
                     return secret
                 secrets[secret_name] = get_secret
-            self.__secrets = secrets
-        return self.__secrets
+            self.__configuration_with_secrets = secrets
+        return self.__configuration_with_secrets
 
     def test(self):
-        print(self.__get_configuration_with_secrets())
+        import pprint
+        pprint(self)
+        pprint(self.__get_configuration_with_secrets())
