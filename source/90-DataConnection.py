@@ -1,7 +1,5 @@
 class DataConnection:
 
-    __secrets = {}
-
     # Initialize connection.
     def __init__(self, configuration):
         if not isinstance(configuration, dict):
@@ -23,3 +21,16 @@ class DataConnection:
             raise Exception(f"Missing ConcurrencyLimit in {self.ConnectionName}")
         if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
             raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
+
+    def __get_secrets(self):
+        # Resolve secrets and initialize secrets collection the first time method is called.
+        if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
+            print(f"Init {self.ConnectionName}")
+            secrets = {}
+            for secret_name, secret in vars(self).items():
+                secrets[secret_name] = resolve_secret(secret) 
+            self.__secrets = SecretCollection(secrets)
+        return self.__secrets
+
+    def test(self):
+        print(self.__get_secrets())

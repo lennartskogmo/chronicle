@@ -839,8 +839,6 @@ class ObjectLoaderQueue:
 
 class DataConnection:
 
-    __secrets = {}
-
     # Initialize connection.
     def __init__(self, configuration):
         if not isinstance(configuration, dict):
@@ -863,8 +861,21 @@ class DataConnection:
         if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
             raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
 
+    def __get_secrets(self):
+        # Resolve secrets and initialize secrets collection the first time method is called.
+        if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
+            print(f"Init {self.ConnectionName}")
+            secrets = {}
+            for secret_name, secret in vars(self).items():
+                secrets[secret_name] = resolve_secret(secret) 
+            self.__secrets = SecretCollection(secrets)
+        return self.__secrets
 
-class DataConnectionRepository: # [OK]
+    def test(self):
+        print(self.__get_secrets())
+
+
+class DataConnectionRepository:
 
     __connections = {}
     __instance    = None
@@ -930,8 +941,8 @@ class DataObject:
             raise Exception("Connection already set")
         self.__connection = connection
 
-    def load(self):
-        print(self.__connection)
+    def test(self):
+        self.__connection.test()
 
 
 class DataObjectCollection:
@@ -999,7 +1010,7 @@ class DataObjectCollection:
         return DataObjectCollection(objects)
 
 
-class DataObjectRepository: # [OK]
+class DataObjectRepository:
 
     __collection = None
     __instance   = None
@@ -1031,3 +1042,24 @@ class DataObjectRepository: # [OK]
     # Return collection containing all objects.
     def get_objects(self):
         return self.__collection
+
+
+class SecretCollection: # [OK]
+
+    # Initialize collection.
+    def __init__(self, secrets):
+        if not isinstance(secrets, dict):
+            raise Exception("Invalid secrets")
+        self.__secrets = {}
+        for secret_name, secret in secrets.items():
+            self.__set_secret(secret_name, secret)
+
+    # Wrap secret in function and store it.
+    def __set_secret(self, secret_name, secret):
+        def get_secret():
+            return secret
+        self.__secrets[secret_name] = get_secret
+
+    # Implement items dictionary interface method.
+    def items(self):
+        return self.__secrets.items()

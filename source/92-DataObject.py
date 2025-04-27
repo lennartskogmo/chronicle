@@ -39,5 +39,5 @@ class DataObject:
             raise Exception("Connection already set")
         self.__connection = connection
 
-    def load(self):
-        print(self.__connection)
+    def test(self):
+        self.__connection.test()
