@@ -22,7 +22,7 @@ class DataConnection:
         if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
             raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
 
-    # Return secrets collection containing configuration including secrets.
+    # Return secrets collection containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize secrets collection the first time method is called.
         if not hasattr(self, f"_{self.__class__.__name__}__secrets"):
