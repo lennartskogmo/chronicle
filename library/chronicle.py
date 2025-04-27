@@ -865,7 +865,6 @@ class DataConnection:
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize secrets dictionary the first time method is called.
         if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
-            # print(f"Init {self.ConnectionName}")
             configuration_with_secrets = {}
             for key, value in vars(self).items():
                 value = resolve_secret(value)
@@ -909,8 +908,6 @@ class DataConnectionRepository: # [OK]
 
 class DataObject:
 
-    __connection = None
-
     # Initialize object.
     def __init__(self, configuration):
         if not isinstance(configuration, dict):
@@ -944,7 +941,7 @@ class DataObject:
             raise Exception(f"Invalid Tags in {self.ObjectName}")
 
     def set_connection(self, connection):
-        if self.__connection is not None:
+        if hasattr(self, f"_{self.__class__.__name__}__connection"):
             raise Exception("Connection already set")
         self.__connection = connection
 
