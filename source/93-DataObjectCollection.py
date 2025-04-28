@@ -1,7 +1,5 @@
 class DataObjectCollection:
 
-    __objects = {}
-
     # Initialize collection.
     def __init__(self, objects):
         if not isinstance(objects, dict):
