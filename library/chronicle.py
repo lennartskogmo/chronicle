@@ -955,8 +955,10 @@ class DataObjectCollection:
     def __init__(self, objects):
         if not isinstance(objects, dict):
             raise Exception("Invalid objects")
+        for object_name, object in objects.items():
+            if not isinstance(object, DataObject):
+                raise Exception(f"Invalid object {object_name}")
         self.__objects = objects
-        # MAYBE: Validate object class.
 
     def __getitem__(self, object_name):
         return self.__objects.get(object_name)
