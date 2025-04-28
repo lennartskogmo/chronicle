@@ -44,7 +44,7 @@ class DataConnection:
     # Return new reader instance.
     def get_reader(self):
         if not hasattr(self, "Reader") or self.Reader is None:
-            raise Exception("No reader associated with connection")
+            raise Exception(f"Connection {self.ConnectionName} has no reader")
         configuration_with_secrets = self.__get_configuration_with_secrets()
         reader = globals()[configuration_with_secrets["Reader"]()]
         reader_arguments = {}
@@ -57,6 +57,9 @@ class DataConnection:
             if key == "Warehouse" : reader_arguments["warehouse"] = value()
         return reader(**reader_arguments)
 
+    # Return true if connection has reader else return false.
+    def has_reader(self):
+        return True if hasattr(self, "Reader") and self.Reader is not None else False
 
     def test(self):
         import pprint

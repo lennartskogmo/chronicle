@@ -29,7 +29,7 @@ class DataObject:
             raise Exception(f"Invalid Status in {self.ObjectName}")
 
         # Validate optional Tags.
-        if hasattr(self, "Tags") and not isinstance(self.Tags, list):
+        if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
 
     def set_connection(self, connection):
