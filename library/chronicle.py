@@ -861,6 +861,10 @@ class DataConnection:
         if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
             raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
 
+        # Validate optional Reader.
+        if hasattr(self, "Reader") and not isinstance(self.Reader, str):
+            raise Exception(f"Invalid Reader in {self.ConnectionName}")
+
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize dictionary the first time method is called.
