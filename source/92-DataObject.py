@@ -33,6 +33,8 @@ class DataObject:
             raise Exception(f"Invalid Tags in {self.ObjectName}")
 
     def set_connection(self, connection):
+        if not isinstance(connection, DataConnection):
+            raise Exception("Invalid connection")
         if hasattr(self, f"_{self.__class__.__name__}__connection"):
             raise Exception("Connection already set")
         self.__connection = connection
