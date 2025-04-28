@@ -863,7 +863,7 @@ class DataConnection:
 
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
-        # Resolve secrets and initialize secrets dictionary the first time method is called.
+        # Resolve secrets and initialize dictionary the first time method is called.
         if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
             configuration_with_secrets = {}
             for key, value in vars(self).items():
