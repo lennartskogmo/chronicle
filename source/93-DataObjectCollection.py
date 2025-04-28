@@ -30,7 +30,7 @@ class DataObjectCollection:
         for object_name, object in self.__objects.items():
             if object.Status == "Active":
                 objects[object_name] = object
-        return DataObjectCollection(objects)
+        return self.__class__(objects)
     
     # Return new subcollection containing only inactive objects.
     def inactive(self):
@@ -38,7 +38,7 @@ class DataObjectCollection:
         for object_name, object in self.__objects.items():
             if object.Status == "Inactive":
                 objects[object_name] = object
-        return DataObjectCollection(objects)
+        return self.__class__(objects)
     
     # Return new subcollection containing only objects with matching connection name.
     def connection(self, connection_name):
@@ -48,7 +48,7 @@ class DataObjectCollection:
         for object_name, object in self.__objects.items():
             if object.ConnectionName == connection_name:
                 objects[object_name] = object
-        return DataObjectCollection(objects)
+        return self.__class__(objects)
 
     # Return new subcollection containing only objects with atleast one matching tag.
     def tags(self, tags):
@@ -60,4 +60,4 @@ class DataObjectCollection:
         for object_name, object in self.__objects.items():
             if hasattr(object, "Tags") and any(item in object.Tags for item in tags):
                 objects[object_name] = object
-        return DataObjectCollection(objects)
+        return self.__class__(objects)
