@@ -976,7 +976,7 @@ class DataObjectCollection:
 
     def values(self):
         return self.__objects.values()
-    
+
     # Return new subcollection containing only active objects.
     def active(self):
         objects = {}
@@ -984,7 +984,7 @@ class DataObjectCollection:
             if object.Status == "Active":
                 objects[object_name] = object
         return self.__class__(objects)
-    
+
     # Return new subcollection containing only inactive objects.
     def inactive(self):
         objects = {}
@@ -992,7 +992,7 @@ class DataObjectCollection:
             if object.Status == "Inactive":
                 objects[object_name] = object
         return self.__class__(objects)
-    
+
     # Return new subcollection containing only objects with matching connection name.
     def connection(self, connection_name):
         if not isinstance(connection_name, str):
