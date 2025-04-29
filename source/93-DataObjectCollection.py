@@ -27,6 +27,7 @@ class DataObjectCollection:
     def values(self):
         return self.__objects.values()
 
+    # Print list of all objects in collection.
     def list(self):
         print(len(self))
         print(self)
