@@ -1066,3 +1066,8 @@ class DataObjectRepository: # [OK]
     # Return collection containing all objects.
     def get_objects(self):
         return self.__collection
+
+
+def get_objects():
+    repo = DataObjectRepository()
+    return repo.get_objects()
