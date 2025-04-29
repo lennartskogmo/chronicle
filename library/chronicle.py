@@ -983,18 +983,25 @@ class DataObjectCollection:
 
     def __getitem__(self, object_name):
         return self.__objects.get(object_name)
-    
+
     def __len__(self):
         return len(self.__objects)
-    
+
+    def __repr__(self):
+        return "\n".join([str(key) for key in self.__objects.keys()])
+
     def items(self):
         return self.__objects.items()
-    
+
     def keys(self):
         return self.__objects.keys()
 
     def values(self):
         return self.__objects.values()
+
+    def list(self):
+        print(len(self))
+        print(self)
 
     # Return new subcollection containing only active objects.
     def active(self):
