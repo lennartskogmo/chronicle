@@ -900,12 +900,6 @@ class DataConnection:
     def has_reader(self):
         return True if hasattr(self, "Reader") and self.Reader is not None else False
 
-    def test(self):
-        import pprint
-        pprint.pprint(self)
-        pprint.pprint(self.__get_configuration_with_secrets()["ConnectionName"]())
-        pprint.pprint(self.__get_configuration_with_secrets())
-
 
 class DataConnectionRepository: # [OK]
 
