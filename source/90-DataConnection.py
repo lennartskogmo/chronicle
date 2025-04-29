@@ -48,6 +48,7 @@ class DataConnection:
         configuration_with_secrets = self.__get_configuration_with_secrets()
         reader = globals()[configuration_with_secrets["Reader"]()]
         reader_arguments = {}
+        # Map connection configuration with secrets to reader constructor arguments.
         for key, value in configuration_with_secrets.items():
             if key == "Host"      : reader_arguments["host"]      = value()
             if key == "Port"      : reader_arguments["port"]      = value()

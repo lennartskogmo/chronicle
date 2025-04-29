@@ -48,6 +48,7 @@ class DataObject:
     def load(self):
         function = globals()[self.Function]
         function_arguments = {}
+        # Map object configuration to load function arguments.
         for key, value in vars(self).items():
             if value is not None:
                 if key == "Mode"            : function_arguments["mode"]            = value

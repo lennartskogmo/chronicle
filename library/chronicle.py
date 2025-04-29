@@ -887,6 +887,7 @@ class DataConnection:
         configuration_with_secrets = self.__get_configuration_with_secrets()
         reader = globals()[configuration_with_secrets["Reader"]()]
         reader_arguments = {}
+        # Map connection configuration with secrets to reader constructor arguments.
         for key, value in configuration_with_secrets.items():
             if key == "Host"      : reader_arguments["host"]      = value()
             if key == "Port"      : reader_arguments["port"]      = value()
@@ -975,6 +976,7 @@ class DataObject:
     def load(self):
         function = globals()[self.Function]
         function_arguments = {}
+        # Map object configuration to load function arguments.
         for key, value in vars(self).items():
             if value is not None:
                 if key == "Mode"            : function_arguments["mode"]            = value
