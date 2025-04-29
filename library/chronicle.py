@@ -949,6 +949,12 @@ class DataObject:
         if not isinstance(self.ConnectionName, str) or self.ConnectionName.strip() == "":
             raise Exception(f"Invalid ConnectionName in {self.ObjectName}")
 
+        # Validate mandatory Function.
+        if not hasattr(self, "Function"):
+            raise Exception(f"Missing Function in {self.ObjectName}")
+        if not isinstance(self.Function, str) or self.Function.strip() == "" or not self.Function.startswith("load_"):
+            raise Exception(f"Invalid Function in {self.ObjectName}")
+
         # Validate mandatory Status.
         if not hasattr(self, "Status"):
             raise Exception(f"Missing Status in {self.ObjectName}")
@@ -966,8 +972,26 @@ class DataObject:
             raise Exception("Connection already set")
         self.__connection = connection
 
-    def test(self):
-        self.__connection.test()
+    def load(self):
+        function = globals()[self.Function]
+        function_arguments = {}
+        for key, value in vars(self).items():
+            if value is not None:
+                if key == "Mode"            : function_arguments["mode"]            = value
+                if key == "ObjectName"      : function_arguments["target"]          = value
+                if key == "ObjectSource"    : function_arguments["source"]          = value
+                if key == "KeyColumns"      : function_arguments["key"]             = value
+                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
+                if key == "HashColumns"     : function_arguments["hash"]            = value
+                if key == "DropColumns"     : function_arguments["drop"]            = value
+                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
+                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
+                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
+        if self.__connection.has_reader():
+            function_arguments["reader"] = self.__connection.get_reader()
+        return function(**function_arguments)
 
 
 class DataObjectCollection:
