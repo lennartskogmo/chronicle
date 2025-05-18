@@ -43,7 +43,7 @@ class ObjectLoaderQueue2:
                 concurrency_number = object.ConcurrencyNumber
             object.ConcurrencyNumber = concurrency_number
 
-        # Initalize queue dictionaries.
+        # Initalize object dictionaries.
         queued = {}
         for connection_name in connections.keys():
             queued[connection_name] = {"Objects" : {}}
