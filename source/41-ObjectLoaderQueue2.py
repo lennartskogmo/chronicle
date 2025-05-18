@@ -23,8 +23,8 @@ class ObjectLoaderQueue2:
     # Populate queue with objects from database.
     def __populate(self, tags):
         objects     = get_objects().active().tags(tags)
-        self.length = len(objects)
         connections = objects.get_connections()
+        self.length = len(objects)
 
         # Initialize concurrency.
         self.connection_maximum_concurrency = {}
