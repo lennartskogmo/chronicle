@@ -1043,7 +1043,8 @@ class DataObject:
         for key, value in configuration.items():
             setattr(self, key, value)
         self.__validate_configuration()
-    
+        self.__set_concurrency_number()
+
     # Validate configuration attributes.
     def __validate_configuration(self):
         # Validate mandatory ObjectName.
@@ -1081,6 +1082,15 @@ class DataObject:
         # Validate optional Tags.
         if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
+
+    # Set concurrency number to 1 or the greatest of concurrency number and partition number.
+    def __set_concurrency_number(self):
+        concurrency_number = 1
+        if hasattr(self, "ConcurrencyNumber") and self.ConcurrencyNumber is not None and self.ConcurrencyNumber > concurrency_number:
+            concurrency_number = self.ConcurrencyNumber
+        if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and self.PartitionNumber > concurrency_number:
+            concurrency_number = self.PartitionNumber
+        self.ConcurrencyNumber = concurrency_number
 
     def set_connection(self, connection):
         if not isinstance(connection, DataConnection):
