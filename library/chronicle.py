@@ -731,16 +731,16 @@ class ObjectLoader:
 
 class ObjectLoaderQueue2:
 
-    length    = 0
-    queued    = {}
-    started   = {}
-    completed = {}
-    connections              = {}
-    connections_with_secrets = {}
+    #length    = 0
+    #queued    = {}
+    #started   = {}
+    #completed = {}
+    #connections              = {}
+    #connections_with_secrets = {}
     global_maximum_concurrency = 0
     global_current_concurrency = 0
-    connection_maximum_concurrency = {}
-    connection_current_concurrency = {}
+    #connection_maximum_concurrency = {}
+    #connection_current_concurrency = {}
 
     # Initialize queue.
     def __init__(self, concurrency, tag):
@@ -750,12 +750,19 @@ class ObjectLoaderQueue2:
         #for connection_name, connection in self.queued.items():
         #    self.connection_maximum_concurrency[connection_name] = connection["ConcurrencyLimit"]
         #    self.connection_current_concurrency[connection_name] = 0
-        #    self.length += len(connection["Objects"])
 
     # Populate queue with objects from database.
     def __populate(self, tags):
-        objects = get_objects().active().tags(tags)
+        objects     = get_objects().active().tags(tags)
+        self.length = len(objects)
         connections = objects.get_connections()
+
+        # Initialize concurrency.
+        self.connection_maximum_concurrency = {}
+        self.connection_current_concurrency = {}
+        for connection_name, connection in connections.items():
+            self.connection_maximum_concurrency[connection_name] = connection.ConcurrencyLimit
+            self.connection_current_concurrency[connection_name] = 0
 
         # Set object concurrency number.
         # TODO: Move this logic inside DataObject.
@@ -767,7 +774,7 @@ class ObjectLoaderQueue2:
                 concurrency_number = object.ConcurrencyNumber
             object.ConcurrencyNumber = concurrency_number
 
-        # Prepare nested queued dictionary containing objects to be processed.
+        # Initalize queue dictionaries.
         queued = {}
         for connection_name in connections.keys():
             queued[connection_name] = {"Objects" : {}}
@@ -775,7 +782,9 @@ class ObjectLoaderQueue2:
             queued[object.ConnectionName]["Objects"][object.ObjectName] = object
         for connection_name, connection in queued.items():
             queued[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1].ConcurrencyNumber, reverse=True))
-        self.queued = queued
+        self.queued    = queued
+        self.completed = {}
+        self.started   = {}
 
     # Return next eligible object.
     def get(self):
