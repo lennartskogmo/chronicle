@@ -56,6 +56,7 @@ class DataObject:
             concurrency_number = self.PartitionNumber
         self.ConcurrencyNumber = concurrency_number
 
+    # Inject connection.
     def set_connection(self, connection):
         if not isinstance(connection, DataConnection):
             raise Exception("Invalid connection")
@@ -63,9 +64,11 @@ class DataObject:
             raise Exception("Connection already set")
         self.__connection = connection
 
+    # Return connection.
     def get_connection(self):
         return self.__connection
 
+    # Load object.
     def load(self):
         function = globals()[self.Function]
         function_arguments = {}
