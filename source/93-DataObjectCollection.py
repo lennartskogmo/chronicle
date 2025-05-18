@@ -32,6 +32,14 @@ class DataObjectCollection:
         print(len(self))
         print(self)
 
+    # Return dictionary of connections associated with objects in the collection.
+    def get_connections(self):
+        connections = {}
+        for object_name, object in self.__objects.items():
+            connection = object.get_connection()
+            connections[connection.ConnectionName] = connection
+        return connections
+
     # Return new subcollection containing only active objects.
     def active(self):
         objects = {}

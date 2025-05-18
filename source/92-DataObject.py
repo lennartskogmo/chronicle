@@ -45,6 +45,9 @@ class DataObject:
             raise Exception("Connection already set")
         self.__connection = connection
 
+    def get_connection(self):
+        return self.__connection
+
     def load(self):
         function = globals()[self.Function]
         function_arguments = {}
