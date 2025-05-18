@@ -1070,6 +1070,14 @@ class DataObject:
         if not isinstance(self.Status, str) or not self.Status in ["Active", "Inactive"]:
             raise Exception(f"Invalid Status in {self.ObjectName}")
 
+        # Validate optional ConcurrencyNumber.
+        if hasattr(self, "ConcurrencyNumber") and self.ConcurrencyNumber is not None and not isinstance(self.ConcurrencyNumber, int):
+            raise Exception(f"Invalid ConcurrencyNumber in {self.ObjectName}")
+
+        # Validate optional PartitionNumber.
+        if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and not isinstance(self.PartitionNumber, int):
+            raise Exception(f"Invalid PartitionNumber in {self.ObjectName}")
+
         # Validate optional Tags.
         if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
