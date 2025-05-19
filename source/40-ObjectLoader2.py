@@ -39,7 +39,7 @@ class ObjectLoader2:
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
                 #object["__rows"] = load_object(object, connection, connection_with_secrets)
-                object.set_loader_result(1)
+                object.set_loader_result(10)
                 if self.post_hook is not None:
                     try:
                         self.post_hook(object)

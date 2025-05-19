@@ -690,7 +690,7 @@ class ObjectLoader2:
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
                 #object["__rows"] = load_object(object, connection, connection_with_secrets)
-                object.set_loader_result(1)
+                object.set_loader_result(10)
                 if self.post_hook is not None:
                     try:
                         self.post_hook(object)
@@ -1179,30 +1179,39 @@ class DataObject:
             function_arguments["reader"] = self.__connection.get_reader()
         return function(**function_arguments)
 
+    # Set loader exception.
     def set_loader_exception(self, exception):
         self.__loader_exception = exception
 
+    # Return true if object has loader exception else return false.
     def has_loader_exception(self):
         return True if hasattr(self, f"_{self.__class__.__name__}__loader_exception") else False
 
+    # Return loader exception.
     def get_loader_exception(self):
         return self.__loader_exception
 
+    # Set loader duration.
     def set_loader_duration(self, duration):
         self.__loader_duration = duration
 
+    # Return loader duration.
     def get_loader_duration(self):
         return self.__loader_duration
 
+    # Set loader result.
     def set_loader_result(self, result):
         self.__loader_result = result
 
+    # Return loader result.
     def get_loader_result(self):
         return self.__loader_result
 
+    # Set loader status.
     def set_loader_status(self, status):
         self.__loader_status = status
 
+    # Return loader status.
     def get_loader_status(self):
         return self.__loader_status
 
