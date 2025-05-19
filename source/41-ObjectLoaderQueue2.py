@@ -1,47 +1,19 @@
 class ObjectLoaderQueue2:
 
-    #length    = 0
-    #queued    = {}
-    #started   = {}
-    #completed = {}
-    #connections              = {}
-    #connections_with_secrets = {}
-    global_maximum_concurrency = 0
-    global_current_concurrency = 0
-    #connection_maximum_concurrency = {}
-    #connection_current_concurrency = {}
-
     # Initialize queue.
-    def __init__(self, concurrency, tag):
-        self.global_maximum_concurrency = concurrency
-        self.__populate(tag)
-        #self.sort()
-        #for connection_name, connection in self.queued.items():
-        #    self.connection_maximum_concurrency[connection_name] = connection["ConcurrencyLimit"]
-        #    self.connection_current_concurrency[connection_name] = 0
-
-    # Populate queue with objects from database.
-    def __populate(self, tags):
+    def __init__(self, concurrency, tags):
         objects     = get_objects().active().tags(tags)
         connections = objects.get_connections()
         self.length = len(objects)
 
         # Initialize concurrency.
+        self.global_maximum_concurrency = concurrency
+        self.global_current_concurrency = 0
         self.connection_maximum_concurrency = {}
         self.connection_current_concurrency = {}
         for connection_name, connection in connections.items():
             self.connection_maximum_concurrency[connection_name] = connection.ConcurrencyLimit
             self.connection_current_concurrency[connection_name] = 0
-
-        # Set object concurrency number.
-        # TODO: Move this logic inside DataObject.
-        for object_name, object in objects.items():
-            concurrency_number = 1
-            if hasattr(object, "PartitionNumber") and isinstance(object.PartitionNumber, int) and object.PartitionNumber > concurrency_number:
-                concurrency_number = object.PartitionNumber
-            if hasattr(object, "ConcurrencyNumber") and isinstance(object.ConcurrencyNumber, int) and object.ConcurrencyNumber > concurrency_number:
-                concurrency_number = object.ConcurrencyNumber
-            object.ConcurrencyNumber = concurrency_number
 
         # Initalize object dictionaries.
         queued = {}
@@ -54,6 +26,8 @@ class ObjectLoaderQueue2:
         self.queued    = queued
         self.completed = {}
         self.started   = {}
+
+        #self.sort()
 
     # Return next eligible object.
     def get(self):
