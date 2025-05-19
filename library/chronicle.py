@@ -61,17 +61,17 @@ if PARAMETER_STORE is not None:
     SSM_CLIENT    = boto3_session.client('ssm')
 
 
-# Parse tag string and return tag list.
-def parse_tag(tag):
-    if isinstance(tag, str):
-        tag = tag.strip()
-        tag = sub(r"\s+", ",", tag)             # Replace multiple spaces with a single comma.
-        tag = sub(r",+", ",", tag)              # Replace multiple commas with a single comma.
-        tag = sub(r"[^A-Za-z0-9_,]+", "", tag)  # Remove everything except alphanumeric characters, underscores and commas.
-        tag = tag.split(",")
-        return tag
+# Parse tags string and return tags list.
+def parse_tags(tags):
+    if isinstance(tags, str):
+        tags = tags.strip()
+        tags = sub(r"\s+", ",", tags)             # Replace multiple spaces with a single comma.
+        tags = sub(r",+", ",", tags)              # Replace multiple commas with a single comma.
+        tags = sub(r"[^A-Za-z0-9_,]+", "", tags)  # Remove everything except alphanumeric characters, underscores and commas.
+        tags = tags.split(",")
+        return tags
     else:
-        raise Exception("Invalid tag")
+        raise Exception("Invalid tags")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
@@ -271,6 +271,10 @@ def load_incremental(
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     return writer.write(df)
 
+
+def get_object(object):
+    repo = DataObjectRepository()
+    return repo.get_object(object)
 
 def get_objects():
     repo = DataObjectRepository()
