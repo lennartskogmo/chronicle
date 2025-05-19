@@ -48,8 +48,8 @@ class ObjectLoaderQueue2:
 
     # Register object as completed.
     def complete(self, object):
-        object_name = object["ObjectName"]
-        connection_name = object["ConnectionName"]
+        object_name = object.ObjectName
+        connection_name = object.ConnectionName
         self.started.pop(object_name)
         self.completed[object_name] = object
         self.connection_current_concurrency[connection_name] -= 1
