@@ -217,39 +217,6 @@ def read_active(table, select=None):
         raise Exception("Invalid select")
 
 
-# Load object according to configuration.
-# Can either look up configuration based on object name or use configuration supplied through arguments.
-def load_object(object, connection=None, connection_with_secrets=None):
-    # Prepare object configuration.
-    if isinstance(object, str):
-        object = get_object(object)
-    if not isinstance(object, dict):
-        raise Exception("Invalid object")
-    # Prepare connection configuration.
-    if connection is None:
-        connection = get_connection(object["ConnectionName"])
-    if not isinstance(connection, dict):
-        raise Exception("Invalid connection")
-    # Prepare connection configuration with secrets.
-    if connection_with_secrets is None:
-        connection_with_secrets = get_connection_with_secrets(connection)
-    if not isinstance(connection_with_secrets, dict):
-        raise Exception("Invalid connection with secrets")
-    
-    # Map connection configuration with secrets to reader constructor arguments.
-    reader_arguments = map_reader_arguments(connection_with_secrets)
-    # Map object configuration to function arguments.
-    function_arguments = map_function_arguments(object)
-
-    # Instantiate reader if connection is associated with reader.
-    if "Reader" in connection_with_secrets and connection_with_secrets["Reader"] is not None:
-        reader = globals()[connection_with_secrets["Reader"]]
-        function_arguments["reader"] = reader(**reader_arguments)
-    
-    # Invoke function.
-    function = globals()[object["Function"]]
-    return function(**function_arguments)
-
 # Perform full load from source to target.
 def load_full(
         reader, source, target, key, mode="insert_update_delete",
