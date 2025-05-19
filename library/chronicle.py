@@ -828,7 +828,7 @@ class DataObjectCollection:
     # Return new subcollection containing only objects with atleast one matching tag.
     def tags(self, tags):
         if isinstance(tags, str):
-            tags = parse_tag(tags)
+            tags = parse_tags(tags)
         if not isinstance(tags, list):
             raise Exception("Invalid tags")
         objects = {}
