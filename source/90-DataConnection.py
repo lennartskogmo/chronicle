@@ -7,6 +7,7 @@ class DataConnection:
         for key, value in configuration.items():
             setattr(self, key, value)
         self.__validate_configuration()
+        self.__lock = Lock()
 
     # Validate configuration attributes.
     def __validate_configuration(self):
@@ -29,6 +30,7 @@ class DataConnection:
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize dictionary the first time method is called.
+        self.__lock.acquire()
         if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
             configuration_with_secrets = {}
             for key, value in vars(self).items():
@@ -39,6 +41,7 @@ class DataConnection:
                         return value
                     configuration_with_secrets[key] = get_value
             self.__configuration_with_secrets = configuration_with_secrets
+        self.__lock.release()
         return self.__configuration_with_secrets
 
     # Return new reader instance.

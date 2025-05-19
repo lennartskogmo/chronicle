@@ -689,7 +689,7 @@ class ObjectLoader2:
                     self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
-                object.loader_result = 10
+                object.loader_result = object.load()
                 if self.post_hook is not None:
                     try:
                         self.post_hook(object)
@@ -1005,6 +1005,7 @@ class DataConnection:
         for key, value in configuration.items():
             setattr(self, key, value)
         self.__validate_configuration()
+        self.__lock = Lock()
 
     # Validate configuration attributes.
     def __validate_configuration(self):
@@ -1027,6 +1028,7 @@ class DataConnection:
     # Return dictionary containing configuration with secrets.
     def __get_configuration_with_secrets(self):
         # Resolve secrets and initialize dictionary the first time method is called.
+        self.__lock.acquire()
         if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
             configuration_with_secrets = {}
             for key, value in vars(self).items():
@@ -1037,6 +1039,7 @@ class DataConnection:
                         return value
                     configuration_with_secrets[key] = get_value
             self.__configuration_with_secrets = configuration_with_secrets
+        self.__lock.release()
         return self.__configuration_with_secrets
 
     # Return new reader instance.
