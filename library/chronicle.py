@@ -689,26 +689,26 @@ class ObjectLoader2:
                     self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
-                object.set_loader_result(object.load())
+                object.loader_result = 10
                 if self.post_hook is not None:
                     try:
                         self.post_hook(object)
                     except Exception as e:
-                        object.set_loader_exception(e)
+                        object.loader_exception = e
                 break
             except Exception as e:
                 if attempt >= 2:
-                    object.set_loader_exception(e)
+                    object.loader_exception = e
                     break
                 sleep(5)
         end = datetime.now()
-        object.set_loader_duration(int(round((end - start).total_seconds(), 0)))
-        if object.has_loader_exception():
-            object.set_loader_status("Failed")
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object.ObjectName} ({object.get_loader_duration()} Seconds) ({attempt} Attempts)")
+        object.loader_duration = int(round((end - start).total_seconds(), 0))
+        if hasattr(object, "loader_exception"):
+            object.loader_status = "Failed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object.ObjectName} ({object.loader_duration} Seconds) ({attempt} Attempts)")
         else:
-            object.set_loader_status("Completed")
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object.ObjectName} ({object.get_loader_duration()} Seconds) ({object.get_loader_result()} Rows)")
+            object.loader_status = "Completed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object.ObjectName} ({object.loader_duration} Seconds) ({object.loader_result} Rows)")
         return object
 
     def __log(self, message):
@@ -719,10 +719,10 @@ class ObjectLoader2:
     def print_errors(self):
         failed = 0
         for object in self.queue.completed.values():
-            if object.get_loader_status() == "Failed":
+            if object.loader_status == "Failed":
                 failed += 1
                 self.__log(f"{object.ObjectName}:")
-                self.__log(object.get_loader_exception())
+                self.__log(object.loader_exception)
         if failed == 0:
             self.__log("No errors")
 
@@ -1177,42 +1177,6 @@ class DataObject:
         if self.__connection.has_reader():
             function_arguments["reader"] = self.__connection.get_reader()
         return function(**function_arguments)
-
-    # Set loader exception.
-    def set_loader_exception(self, exception):
-        self.__loader_exception = exception
-
-    # Return true if object has loader exception else return false.
-    def has_loader_exception(self):
-        return True if hasattr(self, f"_{self.__class__.__name__}__loader_exception") else False
-
-    # Return loader exception.
-    def get_loader_exception(self):
-        return self.__loader_exception
-
-    # Set loader duration.
-    def set_loader_duration(self, duration):
-        self.__loader_duration = duration
-
-    # Return loader duration.
-    def get_loader_duration(self):
-        return self.__loader_duration
-
-    # Set loader result.
-    def set_loader_result(self, result):
-        self.__loader_result = result
-
-    # Return loader result.
-    def get_loader_result(self):
-        return self.__loader_result
-
-    # Set loader status.
-    def set_loader_status(self, status):
-        self.__loader_status = status
-
-    # Return loader status.
-    def get_loader_status(self):
-        return self.__loader_status
 
 
 class DataObjectCollection:
