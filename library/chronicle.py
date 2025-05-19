@@ -272,6 +272,11 @@ def load_incremental(
     return writer.write(df)
 
 
+def get_objects():
+    repo = DataObjectRepository()
+    return repo.get_objects()
+
+
 # Delta table batch writer.
 class DeltaBatchWriter:
 
@@ -560,165 +565,6 @@ class SnowflakeReader(BaseReader):
     # Read from table using single query.
     def _read_single(self, table):
         return spark.read.format("snowflake").options(**self.options).option("dbtable", table).load()
-
-
-class ObjectLoader:
-
-    def __init__(self, concurrency, tags, post_hook=None):
-        self.lock      = Lock()
-        self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
-        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tags=tags)
-        self.post_hook = post_hook
-
-    def run(self):
-        self.__log(f"Concurrency : {self.queue.global_maximum_concurrency}")
-        self.__log(f"Connections : {len(self.queue.queued)}")
-        self.__log(f"Objects : {self.queue.length}\n")
-        futures = []
-        while self.queue.not_empty():
-            # Get eligible objects including connection details from queue and submit them to executor.
-            while object := self.queue.get():
-                futures.append(self.executor.submit(self.__load_object, object))
-            # Check for completed futures and report back to queue.
-            completed = 0
-            for i, future in enumerate(futures):
-                if future.done():
-                    future = futures.pop(i)
-                    self.queue.complete(future.result())
-                    completed += 1
-            if completed > 0:
-                # Resort queue to maximize concurrency utilization.
-                self.queue.sort()
-            # Take a short nap so the main thread is not constantly calling queue.not_empty() and queue.get().
-            sleep(0.1)
-
-    def __load_object(self, object):
-        attempt = 0
-        start = datetime.now()
-        while True:
-            try:
-                attempt += 1
-                if attempt == 1:
-                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
-                else:
-                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
-                object.loader_result = object.load()
-                if self.post_hook is not None:
-                    try:
-                        self.post_hook(object)
-                    except Exception as e:
-                        object.loader_exception = e
-                break
-            except Exception as e:
-                if attempt >= 2:
-                    object.loader_exception = e
-                    break
-                sleep(5)
-        end = datetime.now()
-        object.loader_duration = int(round((end - start).total_seconds(), 0))
-        if hasattr(object, "loader_exception"):
-            object.loader_status = "Failed"
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object.ObjectName} ({object.loader_duration} Seconds) ({attempt} Attempts)")
-        else:
-            object.loader_status = "Completed"
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object.ObjectName} ({object.loader_duration} Seconds) ({object.loader_result} Rows)")
-        return object
-
-    def __log(self, message):
-        self.lock.acquire()
-        print(message)
-        self.lock.release()
-
-    def print_errors(self):
-        failed = 0
-        for object in self.queue.completed.values():
-            if object.loader_status == "Failed":
-                failed += 1
-                self.__log(f"{object.ObjectName}:")
-                self.__log(object.loader_exception)
-        if failed == 0:
-            self.__log("No errors")
-
-
-class ObjectLoaderQueue:
-
-    # Initialize queue.
-    def __init__(self, concurrency, tags):
-        objects     = get_objects().active().tags(tags)
-        connections = objects.get_connections()
-        self.length = len(objects)
-
-        # Initialize concurrency.
-        self.global_maximum_concurrency = concurrency
-        self.global_current_concurrency = 0
-        self.connection_maximum_concurrency = {}
-        self.connection_current_concurrency = {}
-        for connection_name, connection in connections.items():
-            self.connection_maximum_concurrency[connection_name] = connection.ConcurrencyLimit
-            self.connection_current_concurrency[connection_name] = 0
-
-        # Initalize object dictionaries.
-        queued = {}
-        for connection_name, connection in connections.items():
-            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "Objects" : {}}
-        for object in objects.values():
-            queued[object.ConnectionName]["Objects"][object.ObjectName] = object
-        for connection_name, connection in queued.items():
-            queued[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1].ConcurrencyNumber, reverse=True))
-        self.queued    = queued
-        self.completed = {}
-        self.started   = {}
-        self.sort()
-
-    # Return next eligible object.
-    def get(self):
-        # Find next eligible object.
-        object_name = None
-        if self.global_current_concurrency < self.global_maximum_concurrency:
-            for connection_name, connection in self.queued.items():
-                if self.connection_current_concurrency[connection_name] < self.connection_maximum_concurrency[connection_name]:
-                    if connection["Objects"]:
-                        object_name = list(connection["Objects"].keys())[0]
-                        break
-        # Register object as started and return object.
-        if object_name:
-            object = self.queued[connection_name]["Objects"].pop(object_name)
-            self.started[object_name] = object
-            self.connection_current_concurrency[connection_name] += 1
-            self.global_current_concurrency += 1
-            return object
-
-    # Register object as completed.
-    def complete(self, object):
-        object_name = object.ObjectName
-        connection_name = object.ConnectionName
-        self.started.pop(object_name)
-        self.completed[object_name] = object
-        self.connection_current_concurrency[connection_name] -= 1
-        self.global_current_concurrency -= 1
-        self.length -= 1
-
-    # Return true until all objects in queue have been processed.
-    def not_empty(self):
-        if self.length + len(self.started) > 0:
-            return True
-
-    # Sort queue so objects will be picked from connections that require the longest remaining time first.
-    def sort(self):
-        # Calculate score per connection.
-        score = {}
-        for connection_name, connection in self.queued.items():
-            length = len(connection["Objects"])
-            if length > 0:
-                score[connection_name] = length / connection["ConcurrencyLimit"]
-            else:
-                score[connection_name] = 0
-        # Replace queue with new queue sorted by descending connection score.
-        connection_names = sorted(score, key=score.get, reverse=True)
-        queued = {}
-        for connection_name in connection_names:
-            queued[connection_name] = self.queued[connection_name]
-        self.queued = queued
 
 
 class DataConnection:
@@ -1021,6 +867,160 @@ class DataObjectRepository: # [OK]
         return self.__collection
 
 
-def get_objects():
-    repo = DataObjectRepository()
-    return repo.get_objects()
+class ObjectLoader:
+
+    def __init__(self, concurrency, tags, post_hook=None):
+        self.lock      = Lock()
+        self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
+        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tags=tags)
+        self.post_hook = post_hook
+
+    def run(self):
+        self.__log(f"Concurrency : {self.queue.global_maximum_concurrency}")
+        self.__log(f"Connections : {len(self.queue.queued)}")
+        self.__log(f"Objects : {self.queue.length}\n")
+        futures = []
+        while self.queue.not_empty():
+            # Get eligible objects including connection details from queue and submit them to executor.
+            while object := self.queue.get():
+                futures.append(self.executor.submit(self.__load_object, object))
+            # Check for completed futures and report back to queue.
+            completed = 0
+            for i, future in enumerate(futures):
+                if future.done():
+                    future = futures.pop(i)
+                    self.queue.complete(future.result())
+                    completed += 1
+            if completed > 0:
+                # Resort queue to maximize concurrency utilization.
+                self.queue.sort()
+            # Take a short nap so the main thread is not constantly calling queue.not_empty() and queue.get().
+            sleep(0.1)
+
+    def __load_object(self, object):
+        attempt = 0
+        start = datetime.now()
+        while True:
+            try:
+                attempt += 1
+                if attempt == 1:
+                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
+                else:
+                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
+                object.loader_result = object.load()
+                if self.post_hook is not None:
+                    try:
+                        self.post_hook(object)
+                    except Exception as e:
+                        object.loader_exception = e
+                break
+            except Exception as e:
+                if attempt >= 2:
+                    object.loader_exception = e
+                    break
+                sleep(5)
+        end = datetime.now()
+        object.loader_duration = int(round((end - start).total_seconds(), 0))
+        if hasattr(object, "loader_exception"):
+            object.loader_status = "Failed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object.ObjectName} ({object.loader_duration} Seconds) ({attempt} Attempts)")
+        else:
+            object.loader_status = "Completed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object.ObjectName} ({object.loader_duration} Seconds) ({object.loader_result} Rows)")
+        return object
+
+    def __log(self, message):
+        self.lock.acquire()
+        print(message)
+        self.lock.release()
+
+    def print_errors(self):
+        failed = 0
+        for object in self.queue.completed.values():
+            if object.loader_status == "Failed":
+                failed += 1
+                self.__log(f"{object.ObjectName}:")
+                self.__log(object.loader_exception)
+        if failed == 0:
+            self.__log("No errors")
+
+
+class ObjectLoaderQueue:
+
+    # Initialize queue.
+    def __init__(self, concurrency, tags):
+        objects     = get_objects().active().tags(tags)
+        connections = objects.get_connections()
+        self.length = len(objects)
+
+        # Initialize concurrency.
+        self.global_maximum_concurrency = concurrency
+        self.global_current_concurrency = 0
+        self.connection_maximum_concurrency = {}
+        self.connection_current_concurrency = {}
+        for connection_name, connection in connections.items():
+            self.connection_maximum_concurrency[connection_name] = connection.ConcurrencyLimit
+            self.connection_current_concurrency[connection_name] = 0
+
+        # Initalize object dictionaries.
+        queued = {}
+        for connection_name, connection in connections.items():
+            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "Objects" : {}}
+        for object in objects.values():
+            queued[object.ConnectionName]["Objects"][object.ObjectName] = object
+        for connection_name, connection in queued.items():
+            queued[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1].ConcurrencyNumber, reverse=True))
+        self.queued    = queued
+        self.completed = {}
+        self.started   = {}
+        self.sort()
+
+    # Return next eligible object.
+    def get(self):
+        # Find next eligible object.
+        object_name = None
+        if self.global_current_concurrency < self.global_maximum_concurrency:
+            for connection_name, connection in self.queued.items():
+                if self.connection_current_concurrency[connection_name] < self.connection_maximum_concurrency[connection_name]:
+                    if connection["Objects"]:
+                        object_name = list(connection["Objects"].keys())[0]
+                        break
+        # Register object as started and return object.
+        if object_name:
+            object = self.queued[connection_name]["Objects"].pop(object_name)
+            self.started[object_name] = object
+            self.connection_current_concurrency[connection_name] += 1
+            self.global_current_concurrency += 1
+            return object
+
+    # Register object as completed.
+    def complete(self, object):
+        object_name = object.ObjectName
+        connection_name = object.ConnectionName
+        self.started.pop(object_name)
+        self.completed[object_name] = object
+        self.connection_current_concurrency[connection_name] -= 1
+        self.global_current_concurrency -= 1
+        self.length -= 1
+
+    # Return true until all objects in queue have been processed.
+    def not_empty(self):
+        if self.length + len(self.started) > 0:
+            return True
+
+    # Sort queue so objects will be picked from connections that require the longest remaining time first.
+    def sort(self):
+        # Calculate score per connection.
+        score = {}
+        for connection_name, connection in self.queued.items():
+            length = len(connection["Objects"])
+            if length > 0:
+                score[connection_name] = length / connection["ConcurrencyLimit"]
+            else:
+                score[connection_name] = 0
+        # Replace queue with new queue sorted by descending connection score.
+        connection_names = sorted(score, key=score.get, reverse=True)
+        queued = {}
+        for connection_name in connection_names:
+            queued[connection_name] = self.queued[connection_name]
+        self.queued = queued
