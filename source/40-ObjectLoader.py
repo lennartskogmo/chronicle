@@ -1,9 +1,9 @@
-class ObjectLoader2:
+class ObjectLoader:
 
     def __init__(self, concurrency, tags, post_hook=None):
         self.lock      = Lock()
         self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
-        self.queue     = ObjectLoaderQueue2(concurrency=int(concurrency), tags=tags)
+        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tags=tags)
         self.post_hook = post_hook
 
     def run(self):

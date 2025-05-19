@@ -1,4 +1,4 @@
-class ObjectLoaderQueue2:
+class ObjectLoaderQueue:
 
     # Initialize queue.
     def __init__(self, concurrency, tags):
