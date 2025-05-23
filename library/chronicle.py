@@ -61,104 +61,17 @@ if PARAMETER_STORE is not None:
     SSM_CLIENT    = boto3_session.client('ssm')
 
 
-# Return dictionary containing connection configuration or None if no connection was found.
-def get_connection(connection):
-    if isinstance(connection, str):
-        connection = spark.table(CONNECTION).filter(lower("ConnectionName") == lower(lit(connection))).collect()
-        connection = connection[0].asDict() if connection else None
-        return connection
+# Parse tags string and return tags list.
+def parse_tags(tags):
+    if isinstance(tags, str):
+        tags = tags.strip()
+        tags = sub(r"\s+", ",", tags)             # Replace multiple spaces with a single comma.
+        tags = sub(r",+", ",", tags)              # Replace multiple commas with a single comma.
+        tags = sub(r"[^A-Za-z0-9_,]+", "", tags)  # Remove everything except alphanumeric characters, underscores and commas.
+        tags = tags.split(",")
+        return tags
     else:
-        raise Exception("Invalid connection")
-
-# Return dictionary containing connection configuration including secrets or None if no connection was found.
-def get_connection_with_secrets(connection):
-    if isinstance(connection, str):
-        connection = spark.table(CONNECTION).filter(lower("ConnectionName") == lower(lit(connection))).collect()
-        connection = connection[0].asDict() if connection else None
-        if connection is None:
-            return None
-    if isinstance(connection, dict):
-        if not connection:
-            return None
-        connection_with_secrets = {}
-        for key, value in connection.items():
-            connection_with_secrets[key] = resolve_secret(value)
-        return connection_with_secrets
-    else:
-        raise Exception("Invalid connection")
-
-# Return dictionary containing object configuration or None if no object was found.
-def get_object(object):
-    if isinstance(object, str):
-        object = spark.table(OBJECT).filter(lower("ObjectName") == lower(lit(object))).collect()
-        object = object[0].asDict() if object else None
-        return object
-    else:
-        raise Exception("Invalid object")
-
-# Return new reader instance or None if no reader was found.
-def get_reader(connection):
-    if isinstance(connection, str) or isinstance(connection, dict):
-        connection_with_secrets = get_connection_with_secrets(connection)
-        if connection_with_secrets is None or "Reader" not in connection_with_secrets:
-            return None
-        reader_arguments = map_reader_arguments(connection_with_secrets)
-        reader = globals()[connection_with_secrets["Reader"]]
-        return reader(**reader_arguments)
-    else:
-        raise Exception("Invalid connection")
-
-# Map connection configuration with secrets to reader constructor arguments.
-def map_reader_arguments(connection_with_secrets):
-    if isinstance(connection_with_secrets, dict):
-        reader_arguments = {}
-        for key, value in connection_with_secrets.items():
-            if value is not None:
-                if key == "Host"      : reader_arguments["host"]      = value
-                if key == "Port"      : reader_arguments["port"]      = value
-                if key == "Database"  : reader_arguments["database"]  = value
-                if key == "Username"  : reader_arguments["username"]  = value
-                if key == "Password"  : reader_arguments["password"]  = value
-                if key == "Warehouse" : reader_arguments["warehouse"] = value
-        return reader_arguments
-    else:
-        raise Exception("Invalid connection with secrets")
-
-# Map object configuration to function arguments.
-def map_function_arguments(object):
-    if isinstance(object, dict):
-        if "Function" not in object or not object["Function"].startswith("load_"):
-            raise Exception("Invalid function")
-        function_arguments = {}
-        for key, value in object.items():
-            if value is not None:
-                if key == "Mode"            : function_arguments["mode"]            = value
-                if key == "ObjectName"      : function_arguments["target"]          = value
-                if key == "ObjectSource"    : function_arguments["source"]          = value
-                if key == "KeyColumns"      : function_arguments["key"]             = value
-                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
-                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
-                if key == "HashColumns"     : function_arguments["hash"]            = value
-                if key == "DropColumns"     : function_arguments["drop"]            = value
-                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
-                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
-                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
-                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
-        return function_arguments
-    else:
-        raise Exception("Invalid object")
-
-# Parse tag string and return tag list.
-def parse_tag(tag):
-    if isinstance(tag, str):
-        tag = tag.strip()
-        tag = sub(r"\s+", ",", tag)             # Replace multiple spaces with a single comma.
-        tag = sub(r",+", ",", tag)              # Replace multiple commas with a single comma.
-        tag = sub(r"[^A-Za-z0-9_,]+", "", tag)  # Remove everything except alphanumeric characters, underscores and commas.
-        tag = tag.split(",")
-        return tag
-    else:
-        raise Exception("Invalid tag")
+        raise Exception("Invalid tags")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
@@ -304,39 +217,6 @@ def read_active(table, select=None):
         raise Exception("Invalid select")
 
 
-# Load object according to configuration.
-# Can either look up configuration based on object name or use configuration supplied through arguments.
-def load_object(object, connection=None, connection_with_secrets=None):
-    # Prepare object configuration.
-    if isinstance(object, str):
-        object = get_object(object)
-    if not isinstance(object, dict):
-        raise Exception("Invalid object")
-    # Prepare connection configuration.
-    if connection is None:
-        connection = get_connection(object["ConnectionName"])
-    if not isinstance(connection, dict):
-        raise Exception("Invalid connection")
-    # Prepare connection configuration with secrets.
-    if connection_with_secrets is None:
-        connection_with_secrets = get_connection_with_secrets(connection)
-    if not isinstance(connection_with_secrets, dict):
-        raise Exception("Invalid connection with secrets")
-    
-    # Map connection configuration with secrets to reader constructor arguments.
-    reader_arguments = map_reader_arguments(connection_with_secrets)
-    # Map object configuration to function arguments.
-    function_arguments = map_function_arguments(object)
-
-    # Instantiate reader if connection is associated with reader.
-    if "Reader" in connection_with_secrets and connection_with_secrets["Reader"] is not None:
-        reader = globals()[connection_with_secrets["Reader"]]
-        function_arguments["reader"] = reader(**reader_arguments)
-    
-    # Invoke function.
-    function = globals()[object["Function"]]
-    return function(**function_arguments)
-
 # Perform full load from source to target.
 def load_full(
         reader, source, target, key, mode="insert_update_delete",
@@ -357,6 +237,31 @@ def load_incremental(
     max = get_max(table=target, column=bookmark_column, offset=bookmark_offset)
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     return writer.write(df)
+
+
+# Return connection.
+def get_connection(connection):
+    repo = DataConnectionRepository()
+    return repo.get_connection(connection)
+
+# Return object.
+def get_object(object):
+    repo = DataObjectRepository()
+    return repo.get_object(object)
+
+# Return object collection.
+def get_objects():
+    repo = DataObjectRepository()
+    return repo.get_objects()
+
+# Return reader.
+def get_reader(connection):
+    repo = DataConnectionRepository()
+    connection = repo.get_connection(connection)
+    if connection is not None:
+        return connection.get_reader()
+    else:
+        return None
 
 
 # Delta table batch writer.
@@ -649,25 +554,323 @@ class SnowflakeReader(BaseReader):
         return spark.read.format("snowflake").options(**self.options).option("dbtable", table).load()
 
 
+class DataConnection:
+
+    # Initialize connection.
+    def __init__(self, configuration):
+        if not isinstance(configuration, dict):
+            raise Exception("Invalid configuration")
+        for key, value in configuration.items():
+            setattr(self, key, value)
+        self.__validate_configuration()
+        self.__lock = Lock()
+
+    # Validate configuration attributes.
+    def __validate_configuration(self):
+        # Validate mandatory ConnectionName.
+        if not hasattr(self, "ConnectionName"):
+            raise Exception(f"Missing ConnectionName in {vars(self)}")
+        if not isinstance(self.ConnectionName, str) or self.ConnectionName.strip() == "":
+            raise Exception(f"Invalid ConnectionName in {vars(self)}")
+
+        # Validate mandatory ConcurrencyLimit.
+        if not hasattr(self, "ConcurrencyLimit"):
+            raise Exception(f"Missing ConcurrencyLimit in {self.ConnectionName}")
+        if not isinstance(self.ConcurrencyLimit, int) or self.ConcurrencyLimit < 1:
+            raise Exception(f"Invalid ConcurrencyLimit in {self.ConnectionName}")
+
+        # Validate optional Reader.
+        if hasattr(self, "Reader") and self.Reader is not None and not isinstance(self.Reader, str):
+            raise Exception(f"Invalid Reader in {self.ConnectionName}")
+
+    # Return dictionary containing configuration with secrets.
+    def __get_configuration_with_secrets(self):
+        # Resolve secrets and initialize dictionary the first time method is called.
+        self.__lock.acquire()
+        if not hasattr(self, f"_{self.__class__.__name__}__configuration_with_secrets"):
+            configuration_with_secrets = {}
+            for key, value in vars(self).items():
+                if value is not None:
+                    value = resolve_secret(value)
+                    # Wrap value in function.
+                    def get_value(value=value):
+                        return value
+                    configuration_with_secrets[key] = get_value
+            self.__configuration_with_secrets = configuration_with_secrets
+        self.__lock.release()
+        return self.__configuration_with_secrets
+
+    # Return new reader instance.
+    def get_reader(self):
+        if not hasattr(self, "Reader") or self.Reader is None:
+            raise Exception(f"Connection {self.ConnectionName} has no reader")
+        configuration_with_secrets = self.__get_configuration_with_secrets()
+        reader = globals()[configuration_with_secrets["Reader"]()]
+        reader_arguments = {}
+        # Map connection configuration with secrets to reader constructor arguments.
+        for key, value in configuration_with_secrets.items():
+            if key == "Host"      : reader_arguments["host"]      = value()
+            if key == "Port"      : reader_arguments["port"]      = value()
+            if key == "Database"  : reader_arguments["database"]  = value()
+            if key == "Username"  : reader_arguments["username"]  = value()
+            if key == "Password"  : reader_arguments["password"]  = value()
+            if key == "Warehouse" : reader_arguments["warehouse"] = value()
+        return reader(**reader_arguments)
+
+    # Return true if connection has reader else return false.
+    def has_reader(self):
+        return True if hasattr(self, "Reader") and self.Reader is not None else False
+
+
+class DataConnectionRepository: # [OK]
+
+    __instance = None
+
+    # Implement singleton behaviour.
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    # Initialize repository.
+    def __init__(self):
+        # Read data from Delta table.
+        connections = spark.table(CONNECTION)
+        # Instantiate connections.
+        self.__connections = {row["ConnectionName"] : DataConnection(row.asDict()) for row in connections.collect()}
+
+    # Return connection or None if connection does not exist.
+    def get_connection(self, connection_name):
+        if not isinstance(connection_name, str) or connection_name.strip() == "":
+            raise Exception("Invalid connection name")
+        return self.__connections.get(connection_name)
+
+
+class DataObject:
+
+    # Initialize object.
+    def __init__(self, configuration):
+        if not isinstance(configuration, dict):
+            raise Exception("Invalid configuration")
+        for key, value in configuration.items():
+            setattr(self, key, value)
+        self.__validate_configuration()
+        self.__set_concurrency_number()
+
+    # Validate configuration attributes.
+    def __validate_configuration(self):
+        # Validate mandatory ObjectName.
+        if not hasattr(self, "ObjectName"):
+            raise Exception(f"Missing ObjectName in {vars(self)}")
+        if not isinstance(self.ObjectName, str) or self.ObjectName.strip() == "":
+            raise Exception(f"Invalid ObjectName in {vars(self)}")
+
+        # Validate mandatory ConnectionName.
+        if not hasattr(self, "ConnectionName"):
+            raise Exception(f"Missing ConnectionName in {self.ObjectName}")
+        if not isinstance(self.ConnectionName, str) or self.ConnectionName.strip() == "":
+            raise Exception(f"Invalid ConnectionName in {self.ObjectName}")
+
+        # Validate mandatory Function.
+        if not hasattr(self, "Function"):
+            raise Exception(f"Missing Function in {self.ObjectName}")
+        if not isinstance(self.Function, str) or self.Function.strip() == "" or not self.Function.startswith("load_"):
+            raise Exception(f"Invalid Function in {self.ObjectName}")
+
+        # Validate mandatory Status.
+        if not hasattr(self, "Status"):
+            raise Exception(f"Missing Status in {self.ObjectName}")
+        if not isinstance(self.Status, str) or not self.Status in ["Active", "Inactive"]:
+            raise Exception(f"Invalid Status in {self.ObjectName}")
+
+        # Validate optional ConcurrencyNumber.
+        if hasattr(self, "ConcurrencyNumber") and self.ConcurrencyNumber is not None and not isinstance(self.ConcurrencyNumber, int):
+            raise Exception(f"Invalid ConcurrencyNumber in {self.ObjectName}")
+
+        # Validate optional PartitionNumber.
+        if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and not isinstance(self.PartitionNumber, int):
+            raise Exception(f"Invalid PartitionNumber in {self.ObjectName}")
+
+        # Validate optional Tags.
+        if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
+            raise Exception(f"Invalid Tags in {self.ObjectName}")
+
+    # Set concurrency number to 1 or the greatest of concurrency number and partition number.
+    def __set_concurrency_number(self):
+        concurrency_number = 1
+        if hasattr(self, "ConcurrencyNumber") and self.ConcurrencyNumber is not None and self.ConcurrencyNumber > concurrency_number:
+            concurrency_number = self.ConcurrencyNumber
+        if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and self.PartitionNumber > concurrency_number:
+            concurrency_number = self.PartitionNumber
+        self.ConcurrencyNumber = concurrency_number
+
+    # Inject connection.
+    def set_connection(self, connection):
+        if not isinstance(connection, DataConnection):
+            raise Exception("Invalid connection")
+        if hasattr(self, f"_{self.__class__.__name__}__connection"):
+            raise Exception("Connection already set")
+        self.__connection = connection
+
+    # Return connection.
+    def get_connection(self):
+        return self.__connection
+
+    # Load object.
+    def load(self):
+        function = globals()[self.Function]
+        function_arguments = {}
+        # Map object configuration to load function arguments.
+        for key, value in vars(self).items():
+            if value is not None:
+                if key == "Mode"            : function_arguments["mode"]            = value
+                if key == "ObjectName"      : function_arguments["target"]          = value
+                if key == "ObjectSource"    : function_arguments["source"]          = value
+                if key == "KeyColumns"      : function_arguments["key"]             = value
+                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
+                if key == "HashColumns"     : function_arguments["hash"]            = value
+                if key == "DropColumns"     : function_arguments["drop"]            = value
+                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
+                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
+                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
+        if self.__connection.has_reader():
+            function_arguments["reader"] = self.__connection.get_reader()
+        return function(**function_arguments)
+
+
+class DataObjectCollection:
+
+    # Initialize collection.
+    def __init__(self, objects):
+        if not isinstance(objects, dict):
+            raise Exception("Invalid objects")
+        for object_name, object in objects.items():
+            if not isinstance(object, DataObject):
+                raise Exception(f"Invalid object {object_name}")
+        self.__objects = objects
+
+    def __getitem__(self, object_name):
+        return self.__objects.get(object_name)
+
+    def __len__(self):
+        return len(self.__objects)
+
+    def __repr__(self):
+        return "\n".join([str(key) for key in self.__objects.keys()])
+
+    def items(self):
+        return self.__objects.items()
+
+    def keys(self):
+        return self.__objects.keys()
+
+    def values(self):
+        return self.__objects.values()
+
+    # Print list of all objects in collection.
+    def list(self):
+        print(len(self))
+        print(self)
+
+    # Return dictionary of connections associated with objects in the collection.
+    def get_connections(self):
+        connections = {}
+        for object_name, object in self.__objects.items():
+            connection = object.get_connection()
+            connections[connection.ConnectionName] = connection
+        return connections
+
+    # Return new subcollection containing only active objects.
+    def active(self):
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.Status == "Active":
+                objects[object_name] = object
+        return self.__class__(objects)
+
+    # Return new subcollection containing only inactive objects.
+    def inactive(self):
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.Status == "Inactive":
+                objects[object_name] = object
+        return self.__class__(objects)
+
+    # Return new subcollection containing only objects with matching connection name.
+    def connection(self, connection_name):
+        if not isinstance(connection_name, str):
+            raise Exception("Invalid connection name")
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if object.ConnectionName == connection_name:
+                objects[object_name] = object
+        return self.__class__(objects)
+
+    # Return new subcollection containing only objects with atleast one matching tag.
+    def tags(self, tags):
+        if isinstance(tags, str):
+            tags = parse_tags(tags)
+        if not isinstance(tags, list):
+            raise Exception("Invalid tags")
+        objects = {}
+        for object_name, object in self.__objects.items():
+            if hasattr(object, "Tags") and any(item in object.Tags for item in tags):
+                objects[object_name] = object
+        return self.__class__(objects)
+
+
+class DataObjectRepository: # [OK]
+
+    __instance = None
+
+    # Implement singleton behaviour.
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    # Initialize repository.
+    def __init__(self):
+        repo = DataConnectionRepository()
+        # Read data from Delta table.
+        objects = spark.table(OBJECT)
+        # Instantiate objects.
+        objects = {row["ObjectName"] : DataObject(row.asDict()) for row in objects.collect()}
+        for object_name, object in objects.items():
+            object.set_connection(repo.get_connection(object.ConnectionName))
+        # Instantiate collection.
+        self.__collection = DataObjectCollection(objects)
+
+    # Return object or None if object does not exist.
+    def get_object(self, object_name):
+        if not isinstance(object_name, str) or object_name.strip() == "":
+            raise Exception("Invalid object name")
+        return self.__collection[object_name]
+
+    # Return collection containing all objects.
+    def get_objects(self):
+        return self.__collection
+
+
 class ObjectLoader:
 
-    def __init__(self, concurrency, tag, post_hook=None):
+    def __init__(self, concurrency, tags, post_hook=None):
         self.lock      = Lock()
         self.executor  = ThreadPoolExecutor(max_workers=int(concurrency))
-        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tag=tag)
+        self.queue     = ObjectLoaderQueue(concurrency=int(concurrency), tags=tags)
         self.post_hook = post_hook
 
     def run(self):
         self.__log(f"Concurrency : {self.queue.global_maximum_concurrency}")
-        self.__log(f"Connections : {len(self.queue.connections)}")
+        self.__log(f"Connections : {len(self.queue.queued)}")
         self.__log(f"Objects : {self.queue.length}\n")
         futures = []
         while self.queue.not_empty():
             # Get eligible objects including connection details from queue and submit them to executor.
             while object := self.queue.get():
-                connection = self.queue.connections[object["ConnectionName"]]
-                connection_with_secrets = self.queue.connections_with_secrets[object["ConnectionName"]]
-                futures.append(self.executor.submit(self.__load_object, object, connection, connection_with_secrets))
+                futures.append(self.executor.submit(self.__load_object, object))
             # Check for completed futures and report back to queue.
             completed = 0
             for i, future in enumerate(futures):
@@ -680,39 +883,39 @@ class ObjectLoader:
                 self.queue.sort()
             # Take a short nap so the main thread is not constantly calling queue.not_empty() and queue.get().
             sleep(0.1)
-    
-    def __load_object(self, object, connection, connection_with_secrets):
+
+    def __load_object(self, object):
         attempt = 0
         start = datetime.now()
         while True:
             try:
                 attempt += 1
                 if attempt == 1:
-                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object['ObjectName']}")
+                    self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
                 else:
-                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object['ObjectName']}")
-                object["__rows"] = load_object(object, connection, connection_with_secrets)
+                    self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
+                object.loader_result = object.load()
                 if self.post_hook is not None:
                     try:
                         self.post_hook(object)
                     except Exception as e:
-                        object["__exception"] = e
+                        object.loader_exception = e
                 break
             except Exception as e:
                 if attempt >= 2:
-                    object["__exception"] = e
+                    object.loader_exception = e
                     break
                 sleep(5)
         end = datetime.now()
-        object["__duration"] = int(round((end - start).total_seconds(), 0))
-        if "__exception" in object:
-            object["__status"] = "Failed"
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object['ObjectName']} ({object['__duration']} Seconds) ({attempt} Attempts)")
+        object.loader_duration = int(round((end - start).total_seconds(), 0))
+        if hasattr(object, "loader_exception"):
+            object.loader_status = "Failed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Failed]     {object.ObjectName} ({object.loader_duration} Seconds) ({attempt} Attempts)")
         else:
-            object["__status"] = "Completed"
-            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object['ObjectName']} ({object['__duration']} Seconds) ({object['__rows']} Rows)")
+            object.loader_status = "Completed"
+            self.__log(f"{end.time().strftime('%H:%M:%S')}  [Completed]  {object.ObjectName} ({object.loader_duration} Seconds) ({object.loader_result} Rows)")
         return object
-    
+
     def __log(self, message):
         self.lock.acquire()
         print(message)
@@ -721,70 +924,43 @@ class ObjectLoader:
     def print_errors(self):
         failed = 0
         for object in self.queue.completed.values():
-            if object["__status"] == "Failed":
+            if object.loader_status == "Failed":
                 failed += 1
-                self.__log(f"{object['ObjectName']}:")
-                self.__log(object["__exception"])
+                self.__log(f"{object.ObjectName}:")
+                self.__log(object.loader_exception)
         if failed == 0:
             self.__log("No errors")
 
 
 class ObjectLoaderQueue:
 
-    length    = 0
-    queued    = {}
-    started   = {}
-    completed = {}
-    connections              = {}
-    connections_with_secrets = {}
-    global_maximum_concurrency = 0
-    global_current_concurrency = 0
-    connection_maximum_concurrency = {}
-    connection_current_concurrency = {}
-
     # Initialize queue.
-    def __init__(self, concurrency, tag):
-        self.global_maximum_concurrency = concurrency
-        self.__populate(tag)
-        self.sort()
-        for connection_name, connection in self.queued.items():
-            self.connection_maximum_concurrency[connection_name] = connection["ConcurrencyLimit"]
-            self.connection_current_concurrency[connection_name] = 0
-            self.length += len(connection["Objects"])
+    def __init__(self, concurrency, tags):
+        objects     = get_objects().active().tags(tags)
+        connections = objects.get_connections()
+        self.length = len(objects)
 
-    # Populate queue with objects from database.
-    def __populate(self, tag):
-        if isinstance(tag, str):
-            tag = parse_tag(tag)
-        if not isinstance(tag, list):
-            raise Exception("Invalid tag")
-        objects = spark.table(OBJECT).withColumn("__Tags", lit(tag)).where("Status = 'Active'").filter(arrays_overlap("Tags", "__Tags")).drop("__Tags")
-        connections = spark.table("__chronicle.connection").join(objects, ["ConnectionName"], "leftsemi")
-        objects = {row["ObjectName"] : row.asDict() for row in objects.collect()}
-        connections = {row["ConnectionName"] : row.asDict() for row in connections.collect()}
-        # Set object concurrency number.
-        for object_name, object in objects.items():
-            concurrency_number = 1
-            if "ConcurrencyNumber" in object and isinstance(object["ConcurrencyNumber"], int) and object["ConcurrencyNumber"] > concurrency_number:
-                concurrency_number = object["ConcurrencyNumber"]
-            if "PartitionNumber" in object and isinstance(object["PartitionNumber"], int) and object["PartitionNumber"] > concurrency_number:
-                concurrency_number = object["PartitionNumber"]
-            objects[object_name]["ConcurrencyNumber"] = concurrency_number
-        # Prepare dictionaries containing connection details with and without secrets.
+        # Initialize concurrency.
+        self.global_maximum_concurrency = concurrency
+        self.global_current_concurrency = 0
+        self.connection_maximum_concurrency = {}
+        self.connection_current_concurrency = {}
         for connection_name, connection in connections.items():
-            self.connections[connection_name] = {}
-            self.connections_with_secrets[connection_name] = {}
-            for key, value in connection.items():
-                self.connections[connection_name][key] = value
-                self.connections_with_secrets[connection_name][key] = resolve_secret(value)
-        # Prepare nested queued dictionary containing objects to be processed.
-        for connection_name in connections.keys():
-            connections[connection_name]["Objects"] = {}
+            self.connection_maximum_concurrency[connection_name] = connection.ConcurrencyLimit
+            self.connection_current_concurrency[connection_name] = 0
+
+        # Initalize object dictionaries.
+        queued = {}
+        for connection_name, connection in connections.items():
+            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "Objects" : {}}
         for object in objects.values():
-            connections[object["ConnectionName"]]["Objects"][object["ObjectName"]] = object
-        for connection_name, connection in connections.items():
-            connections[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1]['ConcurrencyNumber'], reverse=True))
-        self.queued = connections
+            queued[object.ConnectionName]["Objects"][object.ObjectName] = object
+        for connection_name, connection in queued.items():
+            queued[connection_name]["Objects"] = dict(sorted(connection["Objects"].items(), key=lambda item: item[1].ConcurrencyNumber, reverse=True))
+        self.queued    = queued
+        self.completed = {}
+        self.started   = {}
+        self.sort()
 
     # Return next eligible object.
     def get(self):
@@ -806,8 +982,8 @@ class ObjectLoaderQueue:
 
     # Register object as completed.
     def complete(self, object):
-        object_name = object["ObjectName"]
-        connection_name = object["ConnectionName"]
+        object_name = object.ObjectName
+        connection_name = object.ConnectionName
         self.started.pop(object_name)
         self.completed[object_name] = object
         self.connection_current_concurrency[connection_name] -= 1
