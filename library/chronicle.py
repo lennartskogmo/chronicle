@@ -220,22 +220,24 @@ def read_active(table, select=None):
 # Perform full load from source to target.
 def load_full(
         reader, source, target, key, mode="insert_update_delete",
-        exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
+        exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
     validate_mode(mode=mode, valid=["insert_update", "insert_update_delete"])
     writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     df = reader.read(table=source, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
+    df = transform(df) if transform is not None else df
     return writer.write(df)
 
 # Perform incremental load from source to target.
 def load_incremental(
         reader, source, target, key, bookmark_column, bookmark_offset=None, mode="insert_update",
-        exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None
+        exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
     validate_mode(mode=mode, valid=["insert_update"])
     writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     max = get_max(table=target, column=bookmark_column, offset=bookmark_offset)
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
+    df = transform(df) if transform is not None else df
     return writer.write(df)
 
 
@@ -674,7 +676,7 @@ class DataObject:
         # Validate mandatory Function.
         if not hasattr(self, "Function"):
             raise Exception(f"Missing Function in {self.ObjectName}")
-        if not isinstance(self.Function, str) or self.Function.strip() == "" or not self.Function.startswith("load_"):
+        if not isinstance(self.Function, str) or not self.Function.startswith("load_"):
             raise Exception(f"Invalid Function in {self.ObjectName}")
 
         # Validate mandatory Status.
@@ -694,6 +696,11 @@ class DataObject:
         # Validate optional Tags.
         if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
+
+        # Validate optional TransformFunction.
+        if (hasattr(self, "TransformFunction") and self.TransformFunction is not None and
+            (not isinstance(self.TransformFunction, str) or not self.TransformFunction.startswith("transform_"))):
+            raise Exception(f"Invalid TransformFunction in {self.ObjectName}")
 
     # Set concurrency number to 1 or the greatest of concurrency number and partition number.
     def __set_concurrency_number(self):
@@ -723,18 +730,19 @@ class DataObject:
         # Map object configuration to load function arguments.
         for key, value in vars(self).items():
             if value is not None:
-                if key == "Mode"            : function_arguments["mode"]            = value
-                if key == "ObjectName"      : function_arguments["target"]          = value
-                if key == "ObjectSource"    : function_arguments["source"]          = value
-                if key == "KeyColumns"      : function_arguments["key"]             = value
-                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
-                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
-                if key == "HashColumns"     : function_arguments["hash"]            = value
-                if key == "DropColumns"     : function_arguments["drop"]            = value
-                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
-                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
-                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
-                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
+                if key == "Mode"              : function_arguments["mode"]            = value
+                if key == "ObjectName"        : function_arguments["target"]          = value
+                if key == "ObjectSource"      : function_arguments["source"]          = value
+                if key == "KeyColumns"        : function_arguments["key"]             = value
+                if key == "ExcludeColumns"    : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"     : function_arguments["ignore"]          = value
+                if key == "HashColumns"       : function_arguments["hash"]            = value
+                if key == "DropColumns"       : function_arguments["drop"]            = value
+                if key == "BookmarkColumn"    : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset"    : function_arguments["bookmark_offset"] = value
+                if key == "PartitionColumn"   : function_arguments["parallel_column"] = value
+                if key == "PartitionNumber"   : function_arguments["parallel_number"] = value
+                if key == "TransformFunction" : function_arguments["transform"]       = globals()[value]
         if self.__connection.has_reader():
             function_arguments["reader"] = self.__connection.get_reader()
         return function(**function_arguments)
