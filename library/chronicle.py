@@ -676,7 +676,7 @@ class DataObject:
         # Validate mandatory Function.
         if not hasattr(self, "Function"):
             raise Exception(f"Missing Function in {self.ObjectName}")
-        if not isinstance(self.Function, str) or self.Function.strip() == "" or not self.Function.startswith("load_"):
+        if not isinstance(self.Function, str) or not self.Function.startswith("load_"):
             raise Exception(f"Invalid Function in {self.ObjectName}")
 
         # Validate mandatory Status.
@@ -696,6 +696,11 @@ class DataObject:
         # Validate optional Tags.
         if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
+
+        # Validate optional TransformFunction.
+        if (hasattr(self, "TransformFunction") and self.TransformFunction is not None and
+            (not isinstance(self.TransformFunction, str) or not self.TransformFunction.startswith("transform_"))):
+            raise Exception(f"Invalid TransformFunction in {self.ObjectName}")
 
     # Set concurrency number to 1 or the greatest of concurrency number and partition number.
     def __set_concurrency_number(self):
