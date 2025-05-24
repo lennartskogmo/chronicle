@@ -75,18 +75,19 @@ class DataObject:
         # Map object configuration to load function arguments.
         for key, value in vars(self).items():
             if value is not None:
-                if key == "Mode"            : function_arguments["mode"]            = value
-                if key == "ObjectName"      : function_arguments["target"]          = value
-                if key == "ObjectSource"    : function_arguments["source"]          = value
-                if key == "KeyColumns"      : function_arguments["key"]             = value
-                if key == "ExcludeColumns"  : function_arguments["exclude"]         = value
-                if key == "IgnoreColumns"   : function_arguments["ignore"]          = value
-                if key == "HashColumns"     : function_arguments["hash"]            = value
-                if key == "DropColumns"     : function_arguments["drop"]            = value
-                if key == "BookmarkColumn"  : function_arguments["bookmark_column"] = value
-                if key == "BookmarkOffset"  : function_arguments["bookmark_offset"] = value
-                if key == "PartitionColumn" : function_arguments["parallel_column"] = value
-                if key == "PartitionNumber" : function_arguments["parallel_number"] = value
+                if key == "Mode"              : function_arguments["mode"]            = value
+                if key == "ObjectName"        : function_arguments["target"]          = value
+                if key == "ObjectSource"      : function_arguments["source"]          = value
+                if key == "KeyColumns"        : function_arguments["key"]             = value
+                if key == "ExcludeColumns"    : function_arguments["exclude"]         = value
+                if key == "IgnoreColumns"     : function_arguments["ignore"]          = value
+                if key == "HashColumns"       : function_arguments["hash"]            = value
+                if key == "DropColumns"       : function_arguments["drop"]            = value
+                if key == "BookmarkColumn"    : function_arguments["bookmark_column"] = value
+                if key == "BookmarkOffset"    : function_arguments["bookmark_offset"] = value
+                if key == "PartitionColumn"   : function_arguments["parallel_column"] = value
+                if key == "PartitionNumber"   : function_arguments["parallel_number"] = value
+                if key == "TransformFunction" : function_arguments["transform"]       = globals()[value]
         if self.__connection.has_reader():
             function_arguments["reader"] = self.__connection.get_reader()
         return function(**function_arguments)
