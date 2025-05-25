@@ -158,8 +158,8 @@ def add_hash_columns(df, hash):
         raise Exception("Invalid hash")
     return df
 
-#
-def normalize_column(df, column, schema):
+# Split json column into separate columns using provided schema.
+def normalize_json_column(df, column, schema):
     df = df.withColumn(column, from_json(col(column), schema))
     for field in schema.fields:
         df = df.withColumn(conform_column_name(column+field.name), col(column).getItem(field.name))
