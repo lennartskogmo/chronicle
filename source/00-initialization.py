@@ -6,7 +6,7 @@ from threading import Lock
 from time import sleep
 from urllib.parse import urlencode
 
-from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
+from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, from_json, lag, lead, lit, lower, md5, row_number, when, xxhash64
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 

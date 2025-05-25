@@ -7,7 +7,7 @@ from threading import Lock
 from time import sleep
 from urllib.parse import urlencode
 
-from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, lag, lead, lit, lower, md5, row_number, when, xxhash64
+from pyspark.sql.functions import arrays_overlap, coalesce, col, concat_ws, current_timestamp, expr, from_json, lag, lead, lit, lower, md5, row_number, when, xxhash64
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
@@ -157,6 +157,13 @@ def add_hash_columns(df, hash):
     else:
         raise Exception("Invalid hash")
     return df
+
+# Split json column into separate columns using provided schema.
+def normalize_json_column(df, column, schema):
+    df = df.withColumn(column, from_json(col(column), schema))
+    for field in schema.fields:
+        df = df.withColumn(conform_column_name(column+field.name), col(column).getItem(field.name))
+    return df.drop(column)
 
 # Conform data frame column names to naming convention and check for duplicate column names.
 def conform_column_names(df):
