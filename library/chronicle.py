@@ -732,7 +732,7 @@ class DataObject:
 
     # Load object.
     def load(self):
-        function = globals()[self.Function]
+        function = globals()[self.LoadFunction]
         function_arguments = {}
         # Map object configuration to load function arguments.
         for key, value in vars(self).items():
