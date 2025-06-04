@@ -23,11 +23,11 @@ class DataObject:
         if not isinstance(self.ConnectionName, str) or self.ConnectionName.strip() == "":
             raise Exception(f"Invalid ConnectionName in {self.ObjectName}")
 
-        # Validate mandatory Function.
-        if not hasattr(self, "Function"):
-            raise Exception(f"Missing Function in {self.ObjectName}")
-        if not isinstance(self.Function, str) or not self.Function.startswith("load_"):
-            raise Exception(f"Invalid Function in {self.ObjectName}")
+        # Validate mandatory LoadFunction.
+        if not hasattr(self, "LoadFunction"):
+            raise Exception(f"Missing LoadFunction in {self.ObjectName}")
+        if not isinstance(self.LoadFunction, str) or not self.LoadFunction.startswith("load_"):
+            raise Exception(f"Invalid LoadFunction in {self.ObjectName}")
 
         # Validate mandatory Status.
         if not hasattr(self, "Status"):
