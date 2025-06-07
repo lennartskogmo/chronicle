@@ -61,17 +61,19 @@ if PARAMETER_STORE is not None:
     SSM_CLIENT    = boto3_session.client('ssm')
 
 
-# Parse tags string and return tags list.
-def parse_tags(tags):
-    if isinstance(tags, str):
-        tags = tags.strip()
-        tags = sub(r"\s+", ",", tags)             # Replace multiple spaces with a single comma.
-        tags = sub(r",+", ",", tags)              # Replace multiple commas with a single comma.
-        tags = sub(r"[^A-Za-z0-9_,]+", "", tags)  # Remove everything except alphanumeric characters, underscores and commas.
-        tags = tags.split(",")
-        return tags
+# Convert string to list of uniquely spelled words.
+def string_to_list(words):
+    if isinstance(words, str):
+        words = words.strip()
+        words = sub(r"\s+", ",", words)             # Replace multiple spaces with a single comma.
+        words = sub(r",+", ",", words)              # Replace multiple commas with a single comma.
+        words = sub(r"[^A-Za-z0-9_,]+", "", words)  # Remove everything except alphanumeric characters, underscores and commas.
+        words = words.split(",")                    # Convert to list.
+        words = [word for word in words if word]    # Remove empty items.
+        words = list(dict.fromkeys(words))          # Remove duplicate items.
+        return words
     else:
-        raise Exception("Invalid tags")
+        raise Exception("Invalid words")
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
