@@ -12,7 +12,6 @@ def string_to_list(tags):
     else:
         raise Exception("Invalid tags")
 
-
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
     if isinstance(value, str) and value.startswith("<") and value.endswith(">"):
