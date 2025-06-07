@@ -1,14 +1,17 @@
-# Parse tags string and return tags list.
-def parse_tags(tags):
+# Convert string to list of uniquely spelled words.
+def string_to_list(tags):
     if isinstance(tags, str):
         tags = tags.strip()
         tags = sub(r"\s+", ",", tags)             # Replace multiple spaces with a single comma.
         tags = sub(r",+", ",", tags)              # Replace multiple commas with a single comma.
         tags = sub(r"[^A-Za-z0-9_,]+", "", tags)  # Remove everything except alphanumeric characters, underscores and commas.
-        tags = tags.split(",")
+        tags = tags.split(",")                    # Convert to list.
+        tags = [tag for tag in tags if tag]       # Remove empty items.
+        tags = list(dict.fromkeys(tags))          # Remove duplicate items.
         return tags
     else:
         raise Exception("Invalid tags")
+
 
 # Return secret if value contains reference to secret, otherwise return value.
 def resolve_secret(value):
