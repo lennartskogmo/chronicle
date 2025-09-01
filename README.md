@@ -37,7 +37,7 @@ When using the notebook version the framework notebook must be run before any ot
 See support notebooks for examples.
 
 
-## Using Chronicle without configuration metadata.
+## Using Chronicle without configuration metadata
 
 If you are just testing Chronicle or have a very small project you can use Chronicle components directly from any notebook.  
 
@@ -73,4 +73,4 @@ Since the writer contains all the logic for creating uniform delta tables you ca
 For example you could use the python request library to retrive some json, convert it to a dataframe and use it as the argument of the write method.  
 
 
-## Using Chronicle with configuration metadata.
+## Using Chronicle with configuration metadata
