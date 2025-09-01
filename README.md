@@ -23,4 +23,8 @@ Chronicle can be added to your spark environment either as a python wheel or a d
 
 Running the [build script](build/build.sh) should produce a wheel version of the framework that can be copied to your databricks workspace but this also requires a local installation of docker.  
 
-Using the notebook version of the framework only requires copying the [chronicle notebook](library/chronicle.py) to your databricks workspace.
+Using the notebook version of the framework only requires copying the [chronicle notebook](library/chronicle.py) to your databricks workspace.  
+
+In addition to the framework itself there are a couple of [support notebooks](library/) for loading configuration from yml, creating schemas from configuration, and running the object loader.  
+In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job, but more about that later.  
+
