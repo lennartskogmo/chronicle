@@ -16,5 +16,10 @@ Chronicle uses the concepts data connections and data objects when dealing with 
 - Data objects represents the tables that results from loading data. These tables or objects are also expected to be optimized, vaccumed, anonymized and just managed over time in general
 - Data connections represent connection details needed to load in data
 
-## Using Chronicle in general
+
+## Adding chronicle to your spark environment
+
+Chronicle can be added to your spark environment either as a python wheel or a databricks notebook.
+
+
 
