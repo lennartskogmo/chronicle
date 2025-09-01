@@ -49,4 +49,22 @@ First run the chronicle.py notebook by putting the following in a cell:
 %run ./chronicle.py
 ```
 
+Then you can instantiate the components and use them to load some data:  
 
+```
+reader = SqlserverReader(
+    host     = 'localhost',
+    port     = 1433,
+    database = 'whatever',
+    username = 'whatever',
+    password = 'whatever'
+)
+
+writer = DeltaBatchWriter(
+    mode  = 'insert_update_delete',
+    table = 'target_schema.target_table',
+    key   = 'id'
+)
+
+writer.write(reader.read())
+```
