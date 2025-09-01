@@ -72,3 +72,5 @@ writer.write(reader.read())
 Since the writer contains all the logic for creating uniform delta tables you can give it any dataframe.  
 For example you could use the python request library to retrive some json, convert it to a dataframe and use it as the argument of the write method.  
 
+
+## Using Chronicle with configuration metadata.
