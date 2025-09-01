@@ -28,13 +28,18 @@ Using the notebook version of the framework only requires copying the [chronicle
 Deployments are generally easier when using the notebook verison as deploying a new wheel to a databricks workspace seems to require starting any affected clusters.
 For testing purposes using the nootebook version is recommended.  
 
+
 In addition to the framework itself there are a couple of [support notebooks](library/) for loading configuration from yml, creating schemas from configuration, and running the object loader.  
 In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job, but more about that later.  
+
+When using the wheel version components can imported in typical python fashion.  
+When using the notebook version you need to run the framework notebook.  
+See support notebooks for examples.
 
 
 ## Using Chronicle without configuration metadata.
 
-If you are just testing Chronicle or have a very small project you can use Chronicle components directly from a notebook.  
+If you are just testing Chronicle or have a very small project you can use Chronicle components directly from any notebook.  
 
 Even if you do this, you should still use the resolve_secret function or dbtools to lookup your secrets and avoid storing them direclty in the nootebook.  
 
