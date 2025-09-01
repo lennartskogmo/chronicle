@@ -9,9 +9,12 @@ Although Chronicle was developed on databricks it should work in any spark envir
 The major components of Chronicle are:
 - Readers which are responsible for reading data and producing data frames
 - Writer(s) which are responsible for taking data frames and writing to delta tables
-- Metadata components which are responsible reading configuration data and providing a object oriented interface to the configuration
+- Metadata components which are responsible for handling configuration data and providing a object oriented interface to the configuration
 - The object loader which handles parallel execution of data loading
 
 Chronicle uses the concepts data connections and data objects when dealing with metadata and configuration:
 - Data objects represents the tables that results from loading data. These tables or objects are also expected to be optimized, vaccumed, anonymized and just managed over time in general
 - Data connections represent connection details needed to load in data
+
+## Using Chronicle in general
+
