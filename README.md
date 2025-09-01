@@ -33,7 +33,7 @@ In addition to the framework itself there are a couple of [support notebooks](li
 In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job, but more about that later.  
 
 When using the wheel version components can imported in typical python fashion.  
-When using the notebook version you need to run the framework notebook.  
+When using the notebook version the framework notebook must be run before any other code.  
 See support notebooks for examples.
 
 
