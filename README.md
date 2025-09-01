@@ -25,6 +25,9 @@ Running the [build script](build/build.sh) should produce a wheel version of the
 
 Using the notebook version of the framework only requires copying the [chronicle notebook](library/chronicle.py) to your databricks workspace.  
 
+Deployments are generally easier when using the notebook verison as deploying a new wheel to a databricks workspace seems to require starting any affected clusters.
+For testing purposes using the nootebook version is recommended.  
+
 In addition to the framework itself there are a couple of [support notebooks](library/) for loading configuration from yml, creating schemas from configuration, and running the object loader.  
 In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job, but more about that later.  
 
