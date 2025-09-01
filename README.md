@@ -22,3 +22,5 @@ Chronicle uses the concepts data connections and data objects when dealing with 
 Chronicle can be added to your spark environment either as a python wheel or a databricks notebook.
 
 Running the [build script](build/build.sh) should produce a wheel version of the framework that can be copied to your databricks workspace but this also requires a local installation of docker.  
+
+Using the notebook version of the framework only requires copying the [chronicle notebook](library/chronicle.py) to your databricks workspace.
