@@ -66,7 +66,7 @@ reader = SqlserverReader(
 
 writer = DeltaBatchWriter(
     mode  = 'insert_update_delete',
-    table = 'target_schema.target_table',
+    table = 'target_schema.target_table', # Hive style
     key   = 'id'
 )
 
