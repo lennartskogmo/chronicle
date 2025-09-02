@@ -70,7 +70,7 @@ writer = DeltaBatchWriter(
     key   = 'id'
 )
 
-writer.write(reader.read())
+writer.write(reader.read('[whatever].[dbo].[whatever]'))
 ```
 
 Since the writer contains all the logic for creating uniform delta tables you can give it any dataframe.  
