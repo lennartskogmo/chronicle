@@ -16,6 +16,10 @@ Chronicle uses the concepts data connections and data objects when dealing with 
 - Data objects represents the tables that results from loading data. These tables or objects are also expected to be optimized, vaccumed, anonymized and just managed over time in general
 - Data connections represent connection details needed to load in data
 
+The current version of Chronicle was developed and tested using hive metastore.  
+Getting it to work with Unity catalog will probably require changing from two level naming to three level naming in a couple of places.  
+Configuration options for this through environment variables will probably be added at a later time.  
+
 
 ## Adding Chronicle to your spark environment
 
