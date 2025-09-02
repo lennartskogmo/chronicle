@@ -3,9 +3,13 @@
   LoadFunction   : load_full
   ObjectSource   : example.table_1
   KeyColumns     : [id]
+  Status         : Active
+  Tags           : [test]
 
 - ObjectName     : example.table_2
   ConnectionName : example
   LoadFunction   : load_full
   ObjectSource   : example.table_2
   KeyColumns     : [id]
+  Status         : Active
+  Tags           : [test]
