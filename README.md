@@ -34,7 +34,7 @@ For testing purposes using the nootebook version is recommended.
 
 
 In addition to the framework itself there are a couple of [support notebooks](library/) for loading configuration from yml, creating schemas from configuration, and running the object loader.  
-In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job, but more about that later.  
+In order to load objects on a schedule from metadata these notebooks can be run in sequence from a standard scheduled databricks job.  
 
 When using the wheel version components can imported in typical python fashion.  
 When using the notebook version the framework notebook must be run before any other code.  
