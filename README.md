@@ -86,6 +86,6 @@ Reader classes are thin wrappers around spark jdbc so it is straight forward to 
 Also it is possible to create readers or custom load functions from anything that can return a dataframe, including using spark to read files or just plain old python.  
 Custom load functions are probably better for very specific sources with low probability of resue, like APIs.  
 
-Supported connection configuration options can be gleamed from the get_reader() method in [DataConnection.py](source/40-DataConnection.py)
+Supported connection configuration options can be gleamed from the get_reader() method in [DataConnection.py](source/40-DataConnection.py)  
 Supported object configuration options can be gleamed from the load() method in [DataObject.py](source/42-DataObject.py)  
 
