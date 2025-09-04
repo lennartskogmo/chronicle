@@ -78,3 +78,11 @@ For example you could use the python request library to retrive some json, conve
 
 
 ## Using Chronicle with configuration metadata
+
+First, create your own configuration metadata based on the [example configuration files](configuration/)
+
+At the time of writing this mysql, postgresql, snowflake and sqlserver have premade reader classes.  
+Reader classes are thin wrappers around spark jdbc so it is straight forward to add more.  
+Also it is possible to create readers or custom load functions from anything that can return a dataframe, including plain old python.  
+Custom load functions are probably better for very specific sources with low probability of resue, like APIs.
+
