@@ -134,3 +134,16 @@ print(objects)
 object = get_object('connection.object') # Hive style
 object.load()
 ```
+
+## Load all data objects
+
+```
+%run ./chronicle.py
+```
+
+```
+objects = get_objects().active()
+
+for object in objects.values():
+    object.load()
+```
