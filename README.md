@@ -183,5 +183,5 @@ Objects : 10
 ```
 
 Doing in-memory scd2 appears to be mostly memory bottlenecked.  
-Depending on how big your data is, starting with single node cluster, using memory optimized single instances of 64 - 128gb and a concurrency of 5 might be a good starting point.  
+Depending on how big your data is, starting with single node cluster, using memory optimized a instance of 64 - 128gb and a concurrency of 5 might be a good starting point.  
 Beware that on a single node cluster your whole job will hang if you run the driver out of memmory.  
