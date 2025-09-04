@@ -1,11 +1,17 @@
-- ObjectName     : example.table_1
+- ObjectName     : example.table_1 # Hive style
   ConnectionName : example
   LoadFunction   : load_full
   ObjectSource   : example.table_1
   KeyColumns     : [id]
+  Status         : Active
+  Tags           : [test]
 
-- ObjectName     : example.table_2
+- ObjectName     : example.table_2 # Hive style
   ConnectionName : example
-  LoadFunction   : load_full
+  LoadFunction   : load_incremental
   ObjectSource   : example.table_2
   KeyColumns     : [id]
+  BookmarkColumn : id              # Used for incremental load
+  BookmarkOffset : 1000            # Optionally used for incremental load
+  Status         : Active
+  Tags           : [test]
