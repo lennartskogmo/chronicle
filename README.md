@@ -103,3 +103,11 @@ This can be useful for exploring data in remote sources.
 ```
 %run ./chronicle.py
 ```
+
+```
+reader = get_reader('test') # Use connection name as argument
+
+df = reader.query('SELECT COUNT(*) AS c FROM [database].[schema].[table]')
+
+df.display()
+```
