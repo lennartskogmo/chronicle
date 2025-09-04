@@ -151,5 +151,6 @@ for object in objects.values():
 ## Load objects in parallel
 
 To load multiple objects in parallel the [ObjectLoader](source/50-ObjectLoader.py) class can be used.  
-It takes concurrency and tags as arguments.
+It takes concurrency and tags as arguments.  
+In addition to the concurrency arguments which decides the global concurrency limit, it will also limit the concurrency for each connection to the limit set in the configuration.  
 
