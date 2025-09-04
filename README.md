@@ -95,7 +95,7 @@ Once yaml configuration files have been prepared they must be uploaded to your w
 Default location is /Workspace/Shared/Chronicle/Configuration.  
 Once the configration files have been uploaded run the [load_configuration.py](library/load_configuration_nb.py) notebook to read the metdata into catalog/database.  
 
-## Use a connection to run "federated" queries
+## Use a data connection to run "federated" queries
 
 Although it is not the main point of the framework, connections can be used to run "federated" queries.
 This can be useful for exploring data in remote sources.
@@ -110,4 +110,16 @@ reader = get_reader('test') # Use connection name as argument
 df = reader.query('SELECT COUNT(*) AS c FROM [database].[schema].[table]')
 
 df.display()
+```
+
+## List all active data objects
+
+```
+%run ./chronicle.py
+```
+
+```
+objects = get_objects().active()
+
+print(objects)
 ```
