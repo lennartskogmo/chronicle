@@ -90,3 +90,7 @@ Supported connection configuration options can be gleamed from the get_reader() 
 Supported object configuration options can be gleamed from the load() method in [DataObject.py](source/42-DataObject.py)  
 
 It might also be worth checking out the [initialization.py](source/00-initialization.py) for settings that are common for the whole environment.  
+
+Once yaml configuration files have been prepared they must be uploaded to your workspace.  
+Default location is /Workspace/Shared/Chronicle/Configuration.  
+Once the configration files have been uploaded run the [load_configuration.py](library/load_configuration_nb.py) notebook to read the metdata into catalog/database.  
