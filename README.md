@@ -147,3 +147,9 @@ objects = get_objects().active()
 for object in objects.values():
     object.load()
 ```
+
+## Load objects in parallel
+
+To load multiple objects in parallel the [ObjectLoader](source/50-ObjectLoader.py) class can be used.  
+It takes concurrency and tags as arguments.
+
