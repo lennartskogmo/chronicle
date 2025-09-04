@@ -165,3 +165,19 @@ loader.run()
 
 loader.print_errors()
 ```
+
+The output of the run command is somewhat inspired by dbt or terraform.
+
+```
+Concurrency : 5
+Connections : 2
+Objects : 10
+
+06:59:20  [Starting]   test1.aaa
+06:59:20  [Starting]   test1.bbb
+06:59:20  [Starting]   test1.ccc
+06:59:20  [Starting]   test2.aaa
+06:59:20  [Starting]   test2.bbb
+06:59:48  [Completed]  test1.aaa (28 Seconds) (0 Rows)
+...
+```
