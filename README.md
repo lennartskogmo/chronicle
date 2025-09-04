@@ -83,6 +83,7 @@ First, create your own configuration metadata based on the [example configuratio
 
 At the time of writing this mysql, postgresql, snowflake and sqlserver have premade reader classes.  
 Reader classes are thin wrappers around spark jdbc so it is straight forward to add more.  
-Also it is possible to create readers or custom load functions from anything that can return a dataframe, including plain old python.  
-Custom load functions are probably better for very specific sources with low probability of resue, like APIs.
+Also it is possible to create readers or custom load functions from anything that can return a dataframe, including using spark to read files or just plain old python.  
+Custom load functions are probably better for very specific sources with low probability of resue, like APIs.  
 
+Supported configuration options can be gleamed from the get_reader() method in [DataConnection.py](source/40-DataConnection.py)
