@@ -123,3 +123,14 @@ objects = get_objects().active()
 
 print(objects)
 ```
+
+## Load a single data object
+
+```
+%run ./chronicle.py
+```
+
+```
+object = get_object('connection.object') # Hive style
+object.load()
+```
