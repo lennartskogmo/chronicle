@@ -135,7 +135,7 @@ object = get_object('connection.object') # Hive style
 object.load()
 ```
 
-## Load all data objects
+## Load all data objects sequentially
 
 ```
 %run ./chronicle.py
