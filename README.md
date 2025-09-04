@@ -89,3 +89,4 @@ Custom load functions are probably better for very specific sources with low pro
 Supported connection configuration options can be gleamed from the get_reader() method in [DataConnection.py](source/40-DataConnection.py)  
 Supported object configuration options can be gleamed from the load() method in [DataObject.py](source/42-DataObject.py)  
 
+It might also be worth checking out the [initialization.py](source/00-initialization.py) for settings that are common for the whole environment.  
