@@ -74,3 +74,11 @@ class ObjectLoader:
                 self.__log(object.loader_exception)
         if failed == 0:
             self.__log("No errors")
+
+    def raise_exception_on_errors(self):
+        failed = 0
+        for object in self.queue.completed.values():
+            if object.loader_status == "Failed":
+                failed += 1
+        if failed > 0:
+            raise Exception("Load")
