@@ -73,7 +73,7 @@ class ObjectLoader:
                 self.__log(f"{object.ObjectName}:")
                 self.__log(object.loader_exception)
         if failed == 0:
-            self.__log("No errors")
+            self.__log("Run completed with no errors")
 
     def raise_exception_on_errors(self):
         failed = 0
@@ -81,4 +81,4 @@ class ObjectLoader:
             if object.loader_status == "Failed":
                 failed += 1
         if failed > 0:
-            raise Exception("Load")
+            raise Exception("Run completed with errors.")
