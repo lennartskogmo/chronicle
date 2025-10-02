@@ -551,14 +551,21 @@ class SqlserverReader(BaseReader):
 class SnowflakeReader(BaseReader):
 
     # Initialize reader.
-    def __init__(self, host, warehouse, database, username, password):
-        self.options = {
+    def __init__(self, host, warehouse, database, username, key=None, password=None):
+        options = {
             "sfURL"       : host,
             "sfWarehouse" : warehouse,
             "sfDatabase"  : database,
-            "sfUser"      : username,
-            "sfPassword"  : password         
+            "sfUser"      : username         
         }
+        if key is not None:
+            key = key.replace("-----BEGIN RSA PRIVATE KEY-----", "")
+            key = key.replace("-----END RSA PRIVATE KEY-----", "")
+            key = key.replace("\n", "")
+            options["pem_private_key"] = key
+        if password is not None:
+            options["sfPassword"] = password
+        self.options = options
 
     # Read from table using single query.
     def _read_single(self, table):
@@ -620,6 +627,7 @@ class DataConnection:
         reader_arguments = {}
         # Map connection configuration with secrets to reader constructor arguments.
         for key, value in configuration_with_secrets.items():
+            if key == "Key"       : reader_arguments["key"]       = value()
             if key == "Host"      : reader_arguments["host"]      = value()
             if key == "Port"      : reader_arguments["port"]      = value()
             if key == "Database"  : reader_arguments["database"]  = value()
@@ -946,7 +954,15 @@ class ObjectLoader:
                 self.__log(f"{object.ObjectName}:")
                 self.__log(object.loader_exception)
         if failed == 0:
-            self.__log("No errors")
+            self.__log("Run completed with no errors.")
+
+    def raise_exception_on_errors(self):
+        failed = 0
+        for object in self.queue.completed.values():
+            if object.loader_status == "Failed":
+                failed += 1
+        if failed > 0:
+            raise Exception("Run completed with errors.")
 
 
 class ObjectLoaderQueue:

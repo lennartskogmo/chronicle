@@ -53,6 +53,7 @@ class DataConnection:
         reader_arguments = {}
         # Map connection configuration with secrets to reader constructor arguments.
         for key, value in configuration_with_secrets.items():
+            if key == "Key"       : reader_arguments["key"]       = value()
             if key == "Host"      : reader_arguments["host"]      = value()
             if key == "Port"      : reader_arguments["port"]      = value()
             if key == "Database"  : reader_arguments["database"]  = value()
