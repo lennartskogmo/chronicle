@@ -40,7 +40,7 @@ class ObjectLoader:
                     self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
-                if attempt >= 2:
+                if attempt >= 3:
                     delay = delay + object.RetryDelay
                 object.loader_result = object.load()
                 if self.post_hook is not None:
