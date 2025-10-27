@@ -73,12 +73,12 @@ class DataObject:
 
     # Set retry delay to 5 seconds if no value is present in configuration.
     def __set_retry_delay(self):
-        if not hasattr(self, "RetryDelay") or self."RetryDelay" is None:
+        if not hasattr(self, "RetryDelay") or self.RetryDelay is None:
             self.RetryDelay = 5
 
     # Set retry number to 1 if no value is present in configuration.
     def __set_retry_number(self):
-        if not hasattr(self, "RetryNumber") or self."RetryNumber" is None:
+        if not hasattr(self, "RetryNumber") or self.RetryNumber is None:
             self.RetryNumber = 1
 
     # Inject connection.
