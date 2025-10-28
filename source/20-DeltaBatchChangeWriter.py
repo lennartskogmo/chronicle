@@ -1,5 +1,5 @@
-# Delta table batch writer.
-class DeltaBatchWriter:
+# Delta table batch change writer.
+class DeltaBatchChangeWriter:
 
     # Initialize writer.
     def __init__(self, mode, table, key, ignore=None, hash=None, drop=None):
