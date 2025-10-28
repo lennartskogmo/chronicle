@@ -4,7 +4,7 @@ class SnowflakeReader(BaseReader):
 
     # Initialize reader.
     def __init__(self, host, warehouse, database, username, key=None, password=None):
-        options = {
+        self.options = {
             "sfURL"       : host,
             "sfWarehouse" : warehouse,
             "sfDatabase"  : database,
@@ -14,10 +14,9 @@ class SnowflakeReader(BaseReader):
             key = key.replace("-----BEGIN RSA PRIVATE KEY-----", "")
             key = key.replace("-----END RSA PRIVATE KEY-----", "")
             key = key.replace("\n", "")
-            options["pem_private_key"] = key
+            self.options["pem_private_key"] = key
         if password is not None:
-            options["sfPassword"] = password
-        self.options = options
+            self.options["sfPassword"] = password
 
     # Read from table using single query.
     def _read_single(self, table):

@@ -226,24 +226,24 @@ def read_active(table, select=None):
         raise Exception("Invalid select")
 
 
-# Perform full load from source to target.
-def load_full(
+# Perform full change load from source to target.
+def load_change_full(
         reader, source, target, key, mode="insert_update_delete",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
     validate_mode(mode=mode, valid=["insert_update", "insert_update_delete"])
-    writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
+    writer = DeltaBatchChangeWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     df = reader.read(table=source, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     df = transform(df) if transform is not None else df
     return writer.write(df)
 
-# Perform incremental load from source to target.
-def load_incremental(
+# Perform incremental change load from source to target.
+def load_change_incremental(
         reader, source, target, key, bookmark_column, bookmark_offset=None, mode="insert_update",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
     validate_mode(mode=mode, valid=["insert_update"])
-    writer = DeltaBatchWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
+    writer = DeltaBatchChangeWriter(mode=mode, table=target, key=key, ignore=ignore, hash=hash, drop=drop)
     max = get_max(table=target, column=bookmark_column, offset=bookmark_offset)
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     df = transform(df) if transform is not None else df
@@ -275,19 +275,19 @@ def get_reader(connection):
         return None
 
 
-# Delta table batch writer.
-class DeltaBatchWriter:
+# Delta table batch change writer.
+class DeltaBatchChangeWriter:
 
     # Initialize writer.
     def __init__(self, mode, table, key, ignore=None, hash=None, drop=None):
-        validate_mode(mode=mode, valid=["append", "insert_update", "insert_update_delete"])
+        validate_mode(mode=mode, valid=["backfill", "insert_update", "insert_update_delete"])
         self.key    = key
         self.drop   = drop
         self.hash   = hash
         self.mode   = mode
         self.table  = table
         self.ignore = ignore
-    
+
     # Create Delta table with added metadata columns ANONYMIZED, LOADED, OPERATION, CHECKSUM and KEY.
     def __create_table(self, df):
         df = df.select([lit("C").alias(OPERATION), "*"])
@@ -305,7 +305,7 @@ class DeltaBatchWriter:
             dw = dw.option("delta.enableDeletionVectors", "false")
             dw = dw.option("delta.enableRowTracking", "false")
         dw.saveAsTable(self.table)
-    
+
     # Prepare data frame and Delta table for writing.
     def __prepare(self, df):
         # Perform column transformations.
@@ -314,21 +314,20 @@ class DeltaBatchWriter:
         df = add_key_column(df, self.key)                  # 3 Add key column
         if self.drop: df = drop_columns(df, self.drop)     # 4 Drop columns
         df = add_checksum_column(df, self.ignore)          # 5 Add checksum column
-        # Remove duplicates
+        # Put deduplication logic here.
         # Create table.
         if not spark.catalog._jcatalog.tableExists(self.table):
             self.__create_table(df)
             return df, True
         else:
             return df, False
-    
+
     # Write data frame to Delta table.
     def write(self, df):
         df, new = self.__prepare(df)
-        # mode = "append" if new else self.mode
         mode = self.mode
-        if mode == "append":
-            self.__append(df)
+        if mode == "backfill":
+            self.__backfill(df)
         elif mode == "insert_update":
             self.__insert_update(df)
         elif mode == "insert_update_delete":
@@ -336,13 +335,14 @@ class DeltaBatchWriter:
         else:
             raise Exception("Invalid mode")
         return get_num_output_rows(self.table)
-    
-    # Append source data frame.
-    def __append(self, df):
+
+    # Write data frame to Delta table without doing any checks.
+    # Can be used to speed up backfill if source can provide data without overlap and duplicates.
+    def __backfill(self, df):
         df = df.select([lit("I").alias(OPERATION), "*"])
         df = df.select([current_timestamp().alias(LOADED), "*"])
         df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(self.table)
-    
+
     # Capture inserted and updated records from full or partial source data frame.
     # Will only write one row per key even if source data frame contains duplicate rows.
     # Arbitrary row will be used if source data frame contains nonidentical duplicate rows.
@@ -360,7 +360,7 @@ class DeltaBatchWriter:
             "*"]) \
         .drop(col("_origin")).where(col(OPERATION).isNotNull())
         df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable(self.table)
-    
+
     # Capture inserted, updated and deleted records from full source data frame.
     # Will only write one row per key even if source data frame contains duplicate rows.
     # Arbitrary row will be used if source data frame contains nonidentical duplicate rows.
@@ -552,7 +552,7 @@ class SnowflakeReader(BaseReader):
 
     # Initialize reader.
     def __init__(self, host, warehouse, database, username, key=None, password=None):
-        options = {
+        self.options = {
             "sfURL"       : host,
             "sfWarehouse" : warehouse,
             "sfDatabase"  : database,
@@ -562,10 +562,9 @@ class SnowflakeReader(BaseReader):
             key = key.replace("-----BEGIN RSA PRIVATE KEY-----", "")
             key = key.replace("-----END RSA PRIVATE KEY-----", "")
             key = key.replace("\n", "")
-            options["pem_private_key"] = key
+            self.options["pem_private_key"] = key
         if password is not None:
-            options["sfPassword"] = password
-        self.options = options
+            self.options["sfPassword"] = password
 
     # Read from table using single query.
     def _read_single(self, table):
