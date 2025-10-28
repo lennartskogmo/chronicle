@@ -29,8 +29,10 @@ class ObjectLoader:
             sleep(0.1)
 
     def __load_object(self, object):
-        attempt = 0
-        start = datetime.now()
+        start    = datetime.now()
+        attempt  = 0
+        attempts = object.RetryNumber + 1
+        delay    = object.RetryDelay
         while True:
             try:
                 attempt += 1
@@ -38,6 +40,8 @@ class ObjectLoader:
                     self.__log(f"{start.time().strftime('%H:%M:%S')}  [Starting]   {object.ObjectName}")
                 else:
                     self.__log(f"{datetime.now().time().strftime('%H:%M:%S')}  [Retrying]   {object.ObjectName}")
+                if attempt >= 2:
+                    delay = delay + object.RetryDelay
                 object.loader_result = object.load()
                 if self.post_hook is not None:
                     try:
@@ -46,10 +50,10 @@ class ObjectLoader:
                         object.loader_exception = e
                 break
             except Exception as e:
-                if attempt >= 2:
+                if attempt >= attempts:
                     object.loader_exception = e
                     break
-                sleep(5)
+                sleep(delay)
         end = datetime.now()
         object.loader_duration = int(round((end - start).total_seconds(), 0))
         if hasattr(object, "loader_exception"):

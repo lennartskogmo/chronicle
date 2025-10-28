@@ -8,6 +8,8 @@ class DataObject:
             setattr(self, key, value)
         self.__validate_configuration()
         self.__set_concurrency_number()
+        self.__set_retry_delay()
+        self.__set_retry_number()
 
     # Validate configuration attributes.
     def __validate_configuration(self):
@@ -43,6 +45,14 @@ class DataObject:
         if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and not isinstance(self.PartitionNumber, int):
             raise Exception(f"Invalid PartitionNumber in {self.ObjectName}")
 
+        # Validate optional RetryDelay.
+        if hasattr(self, "RetryDelay") and self.RetryDelay is not None and not isinstance(self.RetryDelay, int):
+            raise Exception(f"Invalid RetryDelay in {self.ObjectName}")
+
+        # Validate optional RetryNumber.
+        if hasattr(self, "RetryNumber") and self.RetryNumber is not None and not isinstance(self.RetryNumber, int):
+            raise Exception(f"Invalid RetryNumber in {self.ObjectName}")
+
         # Validate optional Tags.
         if hasattr(self, "Tags") and self.Tags is not None and not isinstance(self.Tags, list):
             raise Exception(f"Invalid Tags in {self.ObjectName}")
@@ -60,6 +70,16 @@ class DataObject:
         if hasattr(self, "PartitionNumber") and self.PartitionNumber is not None and self.PartitionNumber > concurrency_number:
             concurrency_number = self.PartitionNumber
         self.ConcurrencyNumber = concurrency_number
+
+    # Set retry delay to 5 seconds if no value is present in configuration.
+    def __set_retry_delay(self):
+        if not hasattr(self, "RetryDelay") or self.RetryDelay is None:
+            self.RetryDelay = 5
+
+    # Set retry number to 1 if no value is present in configuration.
+    def __set_retry_number(self):
+        if not hasattr(self, "RetryNumber") or self.RetryNumber is None:
+            self.RetryNumber = 1
 
     # Inject connection.
     def set_connection(self, connection):
