@@ -1,5 +1,5 @@
-# Perform full load from source to target.
-def load_full(
+# Perform full change load from source to target.
+def load_change_full(
         reader, source, target, key, mode="insert_update_delete",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
@@ -9,8 +9,8 @@ def load_full(
     df = transform(df) if transform is not None else df
     return writer.write(df)
 
-# Perform incremental load from source to target.
-def load_incremental(
+# Perform incremental change load from source to target.
+def load_change_incremental(
         reader, source, target, key, bookmark_column, bookmark_offset=None, mode="insert_update",
         exclude=None, ignore=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
     ):
