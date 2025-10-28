@@ -1,6 +1,6 @@
 - ObjectName     : example.table_1 # Hive style
   ConnectionName : example
-  LoadFunction   : load_full
+  LoadFunction   : load_change_full
   ObjectSource   : example.table_1
   KeyColumns     : [id]
   Status         : Active
@@ -8,7 +8,7 @@
 
 - ObjectName     : example.table_2 # Hive style
   ConnectionName : example
-  LoadFunction   : load_incremental
+  LoadFunction   : load_change_incremental
   ObjectSource   : example.table_2
   KeyColumns     : [id]
   BookmarkColumn : id              # Used for incremental load
