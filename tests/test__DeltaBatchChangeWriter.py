@@ -6,10 +6,10 @@ chronicle.EXTERNAL = None
 # COMMAND ----------
 
 # Test that only one row per key gets written even if source data frame contains identical duplicate rows.
-def test__DeltaBatchWriter__insert_update__with_identical_duplicates(table="__test.DeltaBatchWriter__insert_update__with_identical_duplicates"):
+def test__DeltaBatchChangeWriter__insert_update__with_identical_duplicates(table="__test.DeltaBatchChangeWriter__insert_update__with_identical_duplicates"):
     # Prepare.
     spark.sql(f"DROP TABLE IF EXISTS {table}")
-    writer = DeltaBatchWriter(mode="insert_update", table=table, key="id")
+    writer = DeltaBatchChangeWriter(mode="insert_update", table=table, key="id")
 
     # Test insert with duplicate "Apple" rows.
     insert_source_df = spark.createDataFrame([
@@ -60,10 +60,10 @@ def test__DeltaBatchWriter__insert_update__with_identical_duplicates(table="__te
 # COMMAND ----------
 
 # Test that only one row per key gets written even if source data frame contains nonidentical duplicate rows.
-def test__DeltaBatchWriter__insert_update__with_nonidentical_duplicates(table="__test.DeltaBatchWriter__insert_update__with_nonidentical_duplicates"):
+def test__DeltaBatchChangeWriter__insert_update__with_nonidentical_duplicates(table="__test.DeltaBatchChangeWriter__insert_update__with_nonidentical_duplicates"):
     # Prepare.
     spark.sql(f"DROP TABLE IF EXISTS {table}")
-    writer = DeltaBatchWriter(mode="insert_update", table=table, key="id")
+    writer = DeltaBatchChangeWriter(mode="insert_update", table=table, key="id")
 
     # Test insert with duplicate "Apple" rows.
     insert_source_df = spark.createDataFrame([
@@ -114,10 +114,10 @@ def test__DeltaBatchWriter__insert_update__with_nonidentical_duplicates(table="_
 # COMMAND ----------
 
 # Test that only one row per key gets written even if source data frame contains identical duplicate rows.
-def test__DeltaBatchWriter__insert_update_delete__with_identical_duplicates(table="__test.DeltaBatchWriter__insert_update_delete__with_identical_duplicates"):
+def test__DeltaBatchChangeWriter__insert_update_delete__with_identical_duplicates(table="__test.DeltaBatchChangeWriter__insert_update_delete__with_identical_duplicates"):
     # Prepare.
     spark.sql(f"DROP TABLE IF EXISTS {table}")
-    writer = DeltaBatchWriter(mode="insert_update_delete", table=table, key="id")
+    writer = DeltaBatchChangeWriter(mode="insert_update_delete", table=table, key="id")
 
     # Test insert with duplicate "Apple" rows.
     insert_source_df = spark.createDataFrame([
@@ -187,10 +187,10 @@ def test__DeltaBatchWriter__insert_update_delete__with_identical_duplicates(tabl
 # COMMAND ----------
 
 # Test that only one row per key gets written even if source data frame contains nonidentical duplicate rows.
-def test__DeltaBatchWriter__insert_update_delete__with_nonidentical_duplicates(table="__test.DeltaBatchWriter__insert_update_delete__with_nonidentical_duplicates"):
+def test__DeltaBatchChangeWriter__insert_update_delete__with_nonidentical_duplicates(table="__test.DeltaBatchChangeWriter__insert_update_delete__with_nonidentical_duplicates"):
     # Prepare.
     spark.sql(f"DROP TABLE IF EXISTS {table}")
-    writer = DeltaBatchWriter(mode="insert_update_delete", table=table, key="id")
+    writer = DeltaBatchChangeWriter(mode="insert_update_delete", table=table, key="id")
 
     # Test insert with duplicate "Apple" rows.
     insert_source_df = spark.createDataFrame([
@@ -260,7 +260,7 @@ def test__DeltaBatchWriter__insert_update_delete__with_nonidentical_duplicates(t
 # COMMAND ----------
 
 spark.sql("CREATE SCHEMA IF NOT EXISTS __test")
-test__DeltaBatchWriter__insert_update__with_identical_duplicates()
-test__DeltaBatchWriter__insert_update__with_nonidentical_duplicates()
-test__DeltaBatchWriter__insert_update_delete__with_identical_duplicates()
-test__DeltaBatchWriter__insert_update_delete__with_nonidentical_duplicates()
+test__DeltaBatchChangeWriter__insert_update__with_identical_duplicates()
+test__DeltaBatchChangeWriter__insert_update__with_nonidentical_duplicates()
+test__DeltaBatchChangeWriter__insert_update_delete__with_identical_duplicates()
+test__DeltaBatchChangeWriter__insert_update_delete__with_nonidentical_duplicates()
