@@ -20,3 +20,13 @@ def load_change_incremental(
     df = reader.read_greater_than(table=source, column=bookmark_column, value=max, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
     df = transform(df) if transform is not None else df
     return writer.write(df)
+
+# Perform full direct load from source to target.
+def load_direct_full(
+        reader, source, target,
+        exclude=None, hash=None, drop=None, where=None, parallel_number=None, parallel_column=None, transform=None
+    ):
+    writer = DeltaBatchDirectWriter(mode="overwrite", table=target, hash=hash, drop=drop)
+    df = reader.read(table=source, exclude=exclude, where=where, parallel_number=parallel_number, parallel_column=parallel_column)
+    df = transform(df) if transform is not None else df
+    return writer.write(df)
