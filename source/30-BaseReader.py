@@ -3,7 +3,10 @@ class BaseReader:
 
     # Read from table using single query.
     def _read_single(self, table):
-        return spark.read.jdbc(
+        reader = spark.read
+        if self.options:
+            reader = reader.options(**self.options)
+        return reader.jdbc(
             properties    = self.properties,
             url           = self.url,
             table         = table,
@@ -12,7 +15,10 @@ class BaseReader:
 
     # Read from table using multiple parallel queries.
     def _read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
-        return spark.read.jdbc(
+        reader = spark.read
+        if self.options:
+            reader = reader.options(**self.options)
+        return reader.jdbc(
             properties    = self.properties,
             url           = self.url,
             table         = table,
