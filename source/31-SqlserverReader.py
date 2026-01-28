@@ -10,3 +10,4 @@ class SqlserverReader(BaseReader):
             "user"     : username,
             "password" : password
         }
+        self.options = {}

@@ -442,7 +442,10 @@ class BaseReader:
 
     # Read from table using single query.
     def _read_single(self, table):
-        return spark.read.jdbc(
+        reader = spark.read
+        if self.options:
+            reader = reader.options(**self.options)
+        return reader.jdbc(
             properties    = self.properties,
             url           = self.url,
             table         = table,
@@ -451,7 +454,10 @@ class BaseReader:
 
     # Read from table using multiple parallel queries.
     def _read_parallel(self, table, parallel_column, parallel_number, lower_bound, upper_bound):
-        return spark.read.jdbc(
+        reader = spark.read
+        if self.options:
+            reader = reader.options(**self.options)
+        return reader.jdbc(
             properties    = self.properties,
             url           = self.url,
             table         = table,
@@ -576,6 +582,7 @@ class MysqlReader(BaseReader):
     def __init__(self, host, port, database, username, password):
         self.url = f"jdbc:mysql://{host}:{port}/{database}?user={username}&password={password}"
         self.properties = {"driver": "com.mysql.jdbc.Driver"}
+        self.options = {}
 
 
 # PostgreSQL JDBC reader.
@@ -583,9 +590,12 @@ class MysqlReader(BaseReader):
 class PostgresqlReader(BaseReader):
 
     # Initialize reader.
-    def __init__(self, host, port, database, username, password):
+    def __init__(self, host, port, database, username, password, timestamp_ntz = None):
         self.url = f"jdbc:postgresql://{host}:{port}/{database}?" + urlencode({"user" : username, "password" : password})
         self.properties = {"driver": "org.postgresql.Driver"}
+        self.options = {}
+        if timestamp_ntz is True or (isinstance(timestamp_ntz, str) and timestamp_ntz.lower() == "true"):
+            self.options["preferTimestampNTZ"] = "true"
 
 
 # SQLServer JDBC reader.
@@ -600,6 +610,7 @@ class SqlserverReader(BaseReader):
             "user"     : username,
             "password" : password
         }
+        self.options = {}
 
 
 # Snowflake Spark Connector reader.
@@ -682,13 +693,14 @@ class DataConnection:
         reader_arguments = {}
         # Map connection configuration with secrets to reader constructor arguments.
         for key, value in configuration_with_secrets.items():
-            if key == "Key"       : reader_arguments["key"]       = value()
-            if key == "Host"      : reader_arguments["host"]      = value()
-            if key == "Port"      : reader_arguments["port"]      = value()
-            if key == "Database"  : reader_arguments["database"]  = value()
-            if key == "Username"  : reader_arguments["username"]  = value()
-            if key == "Password"  : reader_arguments["password"]  = value()
-            if key == "Warehouse" : reader_arguments["warehouse"] = value()
+            if key == "Key"                            : reader_arguments["key"]           = value()
+            if key == "Host"                           : reader_arguments["host"]          = value()
+            if key == "Port"                           : reader_arguments["port"]          = value()
+            if key == "Database"                       : reader_arguments["database"]      = value()
+            if key == "Username"                       : reader_arguments["username"]      = value()
+            if key == "Password"                       : reader_arguments["password"]      = value()
+            if key == "Warehouse"                      : reader_arguments["warehouse"]     = value()
+            if key == "PreferTimestampWithoutTimeZone" : reader_arguments["timestamp_ntz"] = value()
         return reader(**reader_arguments)
 
     # Return true if connection has reader else return false.
