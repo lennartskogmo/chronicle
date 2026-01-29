@@ -7,6 +7,10 @@ class DataConnection:
         for key, value in configuration.items():
             setattr(self, key, value)
         self.__validate_configuration()
+        if hasattr(self, "PrioritizeConnection") and (self.PrioritizeConnection is True or (isinstance(self.PrioritizeConnection, str) and self.PrioritizeConnection.lower() == "true")):
+            self.PrioritizeConnection = True
+        else:
+            self.PrioritizeConnection = False
         self.__lock = Lock()
 
     # Validate configuration attributes.
