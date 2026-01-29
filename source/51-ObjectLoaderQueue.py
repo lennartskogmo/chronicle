@@ -69,6 +69,8 @@ class ObjectLoaderQueue:
             length = len(connection["Objects"])
             if length > 0:
                 score[connection_name] = length / connection["ConcurrencyLimit"]
+                if connection["PrioritizeConnection"] is True:
+                    score[connection_name] += 1000000
             else:
                 score[connection_name] = 0
         # Replace queue with new queue sorted by descending connection score.
