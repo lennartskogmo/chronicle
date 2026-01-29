@@ -1080,7 +1080,7 @@ class ObjectLoaderQueue:
         # Initalize object dictionaries.
         queued = {}
         for connection_name, connection in connections.items():
-            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "Objects" : {}}
+            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "PrioritizeConnection" : connection.PrioritizeConnection, "Objects" : {}}
         for object in objects.values():
             queued[object.ConnectionName]["Objects"][object.ObjectName] = object
         for connection_name, connection in queued.items():
