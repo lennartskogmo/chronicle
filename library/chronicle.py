@@ -647,6 +647,10 @@ class DataConnection:
         for key, value in configuration.items():
             setattr(self, key, value)
         self.__validate_configuration()
+        if hasattr(self, "PrioritizeConnection") and (self.PrioritizeConnection is True or (isinstance(self.PrioritizeConnection, str) and self.PrioritizeConnection.lower() == "true")):
+            self.PrioritizeConnection = True
+        else:
+            self.PrioritizeConnection = False
         self.__lock = Lock()
 
     # Validate configuration attributes.
@@ -1076,7 +1080,7 @@ class ObjectLoaderQueue:
         # Initalize object dictionaries.
         queued = {}
         for connection_name, connection in connections.items():
-            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "Objects" : {}}
+            queued[connection_name] = {"ConcurrencyLimit" : connection.ConcurrencyLimit, "PrioritizeConnection" : connection.PrioritizeConnection, "Objects" : {}}
         for object in objects.values():
             queued[object.ConnectionName]["Objects"][object.ObjectName] = object
         for connection_name, connection in queued.items():
@@ -1127,6 +1131,8 @@ class ObjectLoaderQueue:
             length = len(connection["Objects"])
             if length > 0:
                 score[connection_name] = length / connection["ConcurrencyLimit"]
+                if connection["PrioritizeConnection"] is True:
+                    score[connection_name] += 1000000
             else:
                 score[connection_name] = 0
         # Replace queue with new queue sorted by descending connection score.
